@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+//npx prisma migrate dev --name init
+//npx prisma generate
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum NotificationType {
+  message
+  connection_request
+  connection_accepted
+  connection_rejected
+}
+enum ResponseStatus {
+  accepted
+  rejected
+}
+model User {
+  id                    Int           @id @default(autoincrement())
+  username              String        @unique
+  email                 String?       @unique
+  password              String
+  name                  String?       @default("")
+  description           String?       @default("")
+  profilePhoto          String?       @default("")
+  location              String?       @default("")
+  messagesSent          Message[]     @relation("SentMessages")
+  messagesReceived      Message[]     @relation("ReceivedMessages")
+  connectionsSent       Connections[] @relation("RequesterConnections")
+  connectionsReceived   Connections[] @relation("AddresseeConnections")
+  createdAt             DateTime      @default(now())
+  notifications         Notification[]
+  notificationsFrom     Notification[] @relation("NotificationFromUser")
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  content     String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  senderId    Int
+  receiver    User?    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId  Int?
+  createdAt   DateTime @default(now())
+  read        Boolean  @default(false)
+  readAt      DateTime? 
+}
+
+model Connections {
+  id            Int      @id @default(autoincrement())
+  requester     User     @relation("RequesterConnections", fields: [requesterId], references: [id])
+  requesterId   Int
+  addressee     User     @relation("AddresseeConnections", fields: [addresseeId], references: [id])
+  addresseeId   Int
+  status        String  
+  createdAt     DateTime @default(now())
+  @@unique([requesterId, addresseeId])
+}
+model Notification {
+  id            Int       @id @default(autoincrement())
+  user          User      @relation(fields: [userId], references: [id])
+  userId        Int      
+  fromUser      User?             @relation("NotificationFromUser", fields: [fromUserId], references: [id])
+  fromUserId    Int?              
+  type          NotificationType
+  content       String    
+  isRead        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  responseStatus ResponseStatus? 
+}
+
