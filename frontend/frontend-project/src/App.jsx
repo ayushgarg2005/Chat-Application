@@ -18,9 +18,11 @@ import axios from "axios";
 import ChatUsers from "./components/ChatUsers";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
-import { UnreadMessagesProvider } from "./contexts/UnreadMessagesContext"; //  NEW
+import { UnreadMessagesProvider } from "./contexts/UnreadMessagesContext";
 import ProfilePage from "./components/ProfilePage";
 import UserProfile from "./components/UserProfile";
+import Chatbot from "./components/Chatbot";
+
 function ProtectedRoute({ children }) {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
@@ -45,9 +47,7 @@ function ProtectedRoute({ children }) {
   return authenticated ? (
     <WebSocketProvider userId={userId}>
       <NotificationProvider>
-        <UnreadMessagesProvider> 
-          {children}
-        </UnreadMessagesProvider>
+        <UnreadMessagesProvider>{children}</UnreadMessagesProvider>
       </NotificationProvider>
     </WebSocketProvider>
   ) : (
@@ -119,14 +119,14 @@ function App() {
             }
           />
         </Routes>
+        <ProtectedRoute>
+          <Chatbot />
+        </ProtectedRoute>
       </Router>
+
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
     </>
   );
 }
 
 export default App;
-
-
-
-{/*  Wrap children here */}

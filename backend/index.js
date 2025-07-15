@@ -658,6 +658,24 @@ app.get('/api/chat-users', authMiddleware, async (req, res) => {
 
 
 
+app.post("/chatbot", async (req, res) => {
+  const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: "Message is required" });
+  }
+
+  try {
+    const response = await axios.post("http://localhost:5001/chat", {
+      message,
+    });
+
+    res.json({ response: response.data.response });
+  } catch (err) {
+    console.error("Chatbot error:", err.message);
+    res.status(500).json({ error: "Failed to communicate with chatbot" });
+  }
+});
 
 
 

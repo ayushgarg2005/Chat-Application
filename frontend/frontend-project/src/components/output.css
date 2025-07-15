@@ -554,6 +554,44 @@ video {
   display: none;
 }
 
+.container {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    max-width: 1536px;
+  }
+}
+
+.fixed {
+  position: fixed;
+}
+
 .absolute {
   position: absolute;
 }
@@ -618,20 +656,20 @@ video {
   top: 1rem;
 }
 
-.-right-1 {
-  right: -0.25rem;
+.bottom-6 {
+  bottom: 1.5rem;
 }
 
-.-top-1 {
-  top: -0.25rem;
+.right-6 {
+  right: 1.5rem;
 }
 
-.-right-1\.5 {
-  right: -0.375rem;
+.bottom-5 {
+  bottom: 1.25rem;
 }
 
-.-top-1\.5 {
-  top: -0.375rem;
+.right-5 {
+  right: 1.25rem;
 }
 
 .z-10 {
@@ -728,6 +766,18 @@ video {
   margin-top: 2rem;
 }
 
+.ml-auto {
+  margin-left: auto;
+}
+
+.mr-auto {
+  margin-right: auto;
+}
+
+.mt-3 {
+  margin-top: 0.75rem;
+}
+
 .line-clamp-2 {
   overflow: hidden;
   display: -webkit-box;
@@ -811,20 +861,20 @@ video {
   height: 100vh;
 }
 
+.h-\[500px\] {
+  height: 500px;
+}
+
 .h-10 {
   height: 2.5rem;
 }
 
-.h-\[16px\] {
-  height: 16px;
+.h-\[460px\] {
+  height: 460px;
 }
 
 .max-h-\[2\.5rem\] {
   max-height: 2.5rem;
-}
-
-.min-h-\[100px\] {
-  min-height: 100px;
 }
 
 .min-h-screen {
@@ -899,8 +949,16 @@ video {
   width: 100%;
 }
 
+.w-80 {
+  width: 20rem;
+}
+
 .w-10 {
   width: 2.5rem;
+}
+
+.w-72 {
+  width: 18rem;
 }
 
 .min-w-0 {
@@ -909,10 +967,6 @@ video {
 
 .min-w-\[70px\] {
   min-width: 70px;
-}
-
-.min-w-\[16px\] {
-  min-width: 16px;
 }
 
 .max-w-2xl {
@@ -945,6 +999,10 @@ video {
 
 .max-w-xs {
   max-width: 20rem;
+}
+
+.max-w-\[75\%\] {
+  max-width: 75%;
 }
 
 .flex-1 {
@@ -1439,6 +1497,10 @@ video {
   padding: 2rem;
 }
 
+.p-2 {
+  padding: 0.5rem;
+}
+
 .px-1\.5 {
   padding-left: 0.375rem;
   padding-right: 0.375rem;
@@ -1509,11 +1571,6 @@ video {
   padding-bottom: 2rem;
 }
 
-.px-1 {
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
-}
-
 .pb-1 {
   padding-bottom: 0.25rem;
 }
@@ -1544,6 +1601,10 @@ video {
 
 .text-right {
   text-align: right;
+}
+
+.font-sans {
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 .text-2xl {
@@ -1955,9 +2016,9 @@ video {
   --tw-gradient-to: #15803d var(--tw-gradient-to-position);
 }
 
-.hover\:text-blue-500:hover {
+.hover\:text-red-300:hover {
   --tw-text-opacity: 1;
-  color: rgb(59 130 246 / var(--tw-text-opacity, 1));
+  color: rgb(252 165 165 / var(--tw-text-opacity, 1));
 }
 
 .hover\:underline:hover {
@@ -2005,6 +2066,10 @@ video {
 .focus\:ring-indigo-500:focus {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(99 102 241 / var(--tw-ring-opacity, 1));
+}
+
+.disabled\:opacity-60:disabled {
+  opacity: 0.6;
 }
 
 .group:hover .group-hover\:scale-105 {
