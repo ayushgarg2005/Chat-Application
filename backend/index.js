@@ -82,23 +82,6 @@ app.delete("/api/delete-user/:userId", async (req, res) => {
   }
 });
 
-
-// app.post("/api/signup", async (req, res) => {
-//   const { username, password } = req.body;
-//   const existing = await prisma.user.findUnique({ where: { username } });
-//   if (existing) return res.status(400).json({ error: "Username taken" });
-//   const hash = await bcrypt.hash(password, 10);
-//   const user = await prisma.user.create({ data: { username, password: hash} });
-
-//   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
-
-//   res.cookie("token", token, {
-//     httpOnly: true,
-//     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-//     sameSite: "lax",
-//     secure: process.env.NODE_ENV === "production"
-//   }).json({ user });
-// });
 app.post("/api/signup", async (req, res) => {
   const { username, password } = req.body;
 
@@ -140,21 +123,6 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
-// app.post("/api/signin", async (req, res) => {
-//   const { username, password } = req.body;
-//   const user = await prisma.user.findUnique({ where: { username } });
-//   if (!user || !(await bcrypt.compare(password, user.password)))
-//     return res.status(401).json({ error: "Invalid credentials" });
-
-//   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
-
-//   res.cookie("token", token, {
-//     httpOnly: true,
-//     maxAge: 7 * 24 * 60 * 60 * 1000,
-//     sameSite: "lax",
-//     secure: process.env.NODE_ENV === "production"
-//   }).json({ user });
-// });
 app.post("/api/signin", async (req, res) => {
   const { username, password } = req.body;
 
@@ -198,13 +166,6 @@ app.post("/api/signin", async (req, res) => {
   }
 });
 
-// app.post("/api/logout", (req, res) => {
-//   res.clearCookie("token", {
-//     httpOnly: true,
-//     sameSite: "lax",
-//     secure: process.env.NODE_ENV === "production"
-//   }).json({ message: "Logged out" });
-// });
 app.post("/api/logout", (req, res) => {
   const token = req.cookies.token;
 
@@ -518,8 +479,6 @@ app.get("/connected", async (req, res) => {
   }
 });
 
-// GET /api/messages/unread-senders-count
-
 // GET /api/unread-senders
 app.get('/unread-senders', authMiddleware, async (req, res) => {
   const userId = req.userId;
@@ -561,7 +520,7 @@ app.post('/messages/mark-read/:senderId', authMiddleware, async (req, res) => {
 
 
 app.get("/user/:userid", async (req, res) => {
-  const userid = parseInt(req.params.userid, 10); // ✅ fixed
+  const userid = parseInt(req.params.userid, 10); 
 
   try {
     const user = await prisma.user.findUnique({
@@ -676,8 +635,6 @@ app.post("/chatbot", async (req, res) => {
     res.status(500).json({ error: "Failed to communicate with chatbot" });
   }
 });
-
-
 
 
 

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { BsChatDotsFill } from "react-icons/bs"; // more compact icon
+import { BsChatDotsFill } from "react-icons/bs";
 
 const Chatbot = () => {
+  const [user, setUser] = useState(null); // Store user info
   const [messages, setMessages] = useState([
     { sender: "bot", text: "Hello! I'm LangBot. How can I help you today?" },
   ]);
@@ -10,8 +11,24 @@ const Chatbot = () => {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
+  // Fetch user on component mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/api/me", {
+          withCredentials: true,
+        });
+        setUser(res.data);
+      } catch (err) {
+        console.error("Error fetching user:", err);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !user?.id) return;
 
     const userMsg = { sender: "user", text: input };
     setMessages((prev) => [...prev, userMsg]);
@@ -21,6 +38,7 @@ const Chatbot = () => {
     try {
       const res = await axios.post("http://localhost:5001/chat", {
         message: input,
+        session_id: `user-${user.id}`, // Send session_id from user ID
       });
 
       const botMsg = {
@@ -46,7 +64,7 @@ const Chatbot = () => {
 
   return (
     <div className="fixed bottom-5 right-5 z-50 font-sans">
-      {/* Small Toggle Button */}
+      {/* Toggle Button */}
       <button
         onClick={() => setOpen(!open)}
         className="w-10 h-10 rounded-full bg-blue-600 text-white shadow-md hover:bg-blue-700 transition flex items-center justify-center"
