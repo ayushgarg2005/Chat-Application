@@ -17,38 +17,42 @@ llm = ChatGoogleGenerativeAI(
     api_key=os.getenv("GOOGLE_API_KEY")
 )
 
+# Define a custom prompt template for conversation
 prompt = PromptTemplate(
-    input_variables=["input"],
-    template="You are LangBot, a helpful AI assistant.\n\nUser: {input}\n\nAssistant:"
+    input_variables=["history", "input"],  # include history for context
+    template="""You are LangBot, a helpful AI assistant.
+Conversation so far:
+{history}
+
+User: {input}
+Assistant:"""
 )
 
-chain = LLMChain(llm=llm, prompt=prompt)
-
-
-# Store memory chains per session (user/session_id -> ConversationChain)
+# Dictionary to store session-specific chains
 session_chains = {}
 
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json()
     user_input = data.get("message", "")
-    session_id = data.get("session_id", "default")  # fallback session id
+    session_id = data.get("session_id", "default")
 
     if not user_input:
         return jsonify({"error": "No input provided"}), 400
 
     try:
-        # If session doesn't exist, create it with memory
+        # If session doesn't exist, create it with memory and custom prompt
         if session_id not in session_chains:
-            memory = ConversationBufferMemory(return_messages=True)
-            session_chains[session_id] = ConversationChain(
+            memory = ConversationBufferMemory(memory_key="history", return_messages=False)
+            session_chains[session_id] = LLMChain(
                 llm=llm,
+                prompt=prompt,
                 memory=memory,
                 verbose=False
             )
 
         chain = session_chains[session_id]
-        response = chain.run(user_input)
+        response = chain.run(input=user_input)
 
         return jsonify({"response": response})
 
