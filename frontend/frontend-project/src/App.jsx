@@ -54,14 +54,16 @@ function ProtectedRoute({ children }) {
     <Navigate to="/signup" />
   );
 }
-
 function App() {
   return (
     <>
       <Router>
         <Routes>
+          {/* Public Routes */}
           <Route path="/signup" element={<Signup />} />
           <Route path="/signin" element={<Signin />} />
+
+          {/* Protected Routes */}
           <Route
             path="/"
             element={
@@ -119,6 +121,8 @@ function App() {
             }
           />
         </Routes>
+
+        {/* Put Chatbot inside a Route if you want it to depend on path */}
         <ProtectedRoute>
           <Chatbot />
         </ProtectedRoute>
@@ -128,5 +132,6 @@ function App() {
     </>
   );
 }
+
 
 export default App;
