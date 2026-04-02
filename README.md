@@ -1,13 +1,14 @@
 # 💬 Real-Time Chat Application
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
-[![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io)
-[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org)
+[![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
+[![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=websocket&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
 [![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)](https://www.prisma.io)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org)
+[![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=JSON%20web%20tokens&logoColor=white)](https://jwt.io)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-[![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/CSS)
 
-> A **full-stack real-time chat application** powered by **Socket.io WebSockets** for instant bi-directional messaging, **Prisma ORM** for type-safe database access, and a clean React-based UI — built for production-level scalability and performance.
+> A **production-grade real-time chat platform** built with native **WebSockets (`ws`)**, **Prisma ORM**, and **JWT cookie-based auth**. Features include a LinkedIn-style **connection system**, **live presence tracking**, **typing indicators**, **unread message counts**, an **in-app notification engine**, and a **Python-powered AI chatbot** integration — all on a single Node.js server.
 
 ---
 
@@ -16,34 +17,37 @@
 - [Overview](#-overview)
 - [Tech Stack](#-tech-stack)
 - [Architecture & Flow Diagram](#-architecture--flow-diagram)
-- [WebSocket Event Flow](#-websocket-event-flow)
+- [WebSocket Event Lifecycle](#-websocket-event-lifecycle)
 - [Features](#-features)
+- [Database Schema](#-database-schema)
 - [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
-- [API & Socket Events Reference](#-api--socket-events-reference)
+- [Complete API Reference](#-complete-api-reference)
+- [WebSocket Events Reference](#-websocket-events-reference)
 - [Key Design Decisions](#-key-design-decisions)
 
 ---
 
 ## 🔍 Overview
 
-This project is a **real-time messaging platform** where users can join rooms, send messages instantly, and see live updates — all without page refreshes. It combines a traditional **REST API** (for auth and history) with **WebSocket connections** (for live messaging), giving the best of both worlds: reliability and speed.
+This is not a basic chat app. It is a **social messaging platform** where users must first establish a **connection** (like LinkedIn) before they can message each other. The backend runs a unified **Express + WebSocket server** — both HTTP REST and WebSocket traffic share a single Node.js `http.Server` instance, keeping deployment simple.
 
-The backend uses **Prisma ORM** for type-safe, schema-driven database operations, making it easy to scale the data layer without raw SQL errors.
+Authentication uses **JWT stored in httpOnly cookies**, which are automatically sent with every REST request. WebSocket connections are authenticated via an explicit `auth` event immediately after the socket opens.
 
 ---
 
 ## 🛠 Tech Stack
 
-| Layer | Technology | Purpose |
+| Layer | Technology | Why This Choice |
 |---|---|---|
-| **Frontend** | React.js, CSS3 | UI rendering, real-time updates |
-| **Backend** | Node.js, Express.js | REST API server |
-| **Real-Time Engine** | Socket.io | Bi-directional WebSocket communication |
-| **ORM** | Prisma | Type-safe database access & migrations |
-| **Database** | PostgreSQL / SQLite (via Prisma) | Message & user persistence |
-| **Scripting** | Python | Utility scripts / tooling |
-| **Version Control** | Git & GitHub | Source management |
+| **Runtime** | Node.js | Non-blocking I/O — ideal for real-time |
+| **HTTP Framework** | Express.js | REST API routing + middleware |
+| **WebSocket** | `ws` (native) | Lightweight, no abstraction overhead vs Socket.io |
+| **ORM** | Prisma | Type-safe DB queries, auto migrations |
+| **Auth** | JWT + `httpOnly` cookies | Secure, XSS-resistant token storage |
+| **Password Hashing** | bcryptjs | Industry-standard salted hashing |
+| **Frontend** | React.js + CSS3 | Component-driven real-time UI |
+| **AI Chatbot** | Python service (port 5001) | Decoupled microservice for chatbot logic |
 
 ---
 
@@ -51,135 +55,214 @@ The backend uses **Prisma ORM** for type-safe, schema-driven database operations
 
 ```mermaid
 flowchart TD
-    subgraph Clients["👥 Client Layer"]
-        UA([👤 User A\nBrowser])
-        UB([👤 User B\nBrowser])
-        UC([👤 User C\nBrowser])
+    subgraph CLIENT["⚛️ React Frontend"]
+        UI[Chat UI]
+        WC[Native WebSocket Client]
+        RC[REST Client · Axios/Fetch]
     end
 
-    subgraph Frontend["⚛️ React Frontend · frontend/frontend-project"]
-        UI[Chat UI Components]
-        SC[Socket.io Client]
-        AX[Axios / Fetch · REST Calls]
+    subgraph SERVER["🟢 Unified Node.js Server · Port 3000"]
+        EX[Express REST Router]
+        MW[Auth Middleware\nJWT Cookie Verify]
+        WSS[WebSocket Server · ws\nclients map: userId → socket]
+        ONL[Online Users Set]
     end
 
-    subgraph Backend["🟢 Node.js + Express Backend · backend/"]
-        REST[REST API Routes\n/api/auth · /api/rooms]
-        SIO[Socket.io Server\nEvent Handler]
-        MW[Auth Middleware\nJWT Verify]
+    subgraph WSEVENTS["⚡ WebSocket Event Bus"]
+        AUTH_EV[auth]
+        MSG_EV[message]
+        MARK_EV[markRead]
+        CONN_REQ[connection_request]
+        CONN_RES[connection-response]
+        TYPING_EV[typing · stop_typing]
     end
 
-    subgraph Realtime["⚡ Real-Time Event Bus"]
-        JOIN[join_room]
-        SEND[send_message]
-        RECV[receive_message broadcast]
-        TYPING[typing_indicator]
-        LEAVE[user_left]
-    end
-
-    subgraph ORM["🔷 Prisma ORM Layer"]
-        PM[Prisma Client]
-        SCHEMA[schema.prisma · Data Models]
+    subgraph ORM["🔷 Prisma ORM"]
+        PC[Prisma Client]
     end
 
     subgraph DB["🗄 Database"]
-        USERS[(Users)]
-        ROOMS[(Rooms)]
-        MSGS[(Messages)]
+        TU[(User)]
+        TM[(Message)]
+        TC[(Connections)]
+        TN[(Notification)]
     end
 
-    UA & UB & UC -->|Open App| UI
-    UI --> AX
-    UI --> SC
+    subgraph BOT["🤖 Python Chatbot\nPort 5001"]
+        PY[/chat endpoint/]
+    end
 
-    AX -->|HTTP · /api/auth/login| REST
-    REST --> MW
-    MW -->|Valid JWT| REST
-    REST --> PM
+    UI --> RC
+    UI --> WC
 
-    SC <-->|WebSocket persistent connection| SIO
+    RC -->|HTTP + Cookie| EX
+    EX --> MW
+    MW -->|Authenticated| EX
+    EX --> PC
 
-    SIO --> JOIN
-    SIO --> SEND
-    SIO --> TYPING
-    SIO --> LEAVE
+    WC <-->|Persistent WS| WSS
+    WSS --> WSEVENTS
 
-    SEND -->|Store Message| PM
-    JOIN --> RECV
-    SEND --> RECV
-    RECV -->|Broadcast to Room| SC
+    AUTH_EV -->|Register socket| ONL
+    MSG_EV -->|Check connection\nStore + Broadcast| PC
+    MARK_EV -->|Update read status| PC
+    CONN_REQ -->|Create pending\nNotify target| PC
+    CONN_RES -->|Update status\nNotify requester| PC
+    TYPING_EV -->|Forward to target| WSS
 
-    PM --> SCHEMA
-    SCHEMA --> USERS
-    SCHEMA --> ROOMS
-    SCHEMA --> MSGS
+    PC --> TU
+    PC --> TM
+    PC --> TC
+    PC --> TN
 
-    style UA fill:#4A90D9,color:#fff
-    style UB fill:#4A90D9,color:#fff
-    style UC fill:#4A90D9,color:#fff
-    style UI fill:#61DAFB,color:#000
-    style SIO fill:#2c2c2c,color:#fff
-    style SC fill:#2c2c2c,color:#fff
-    style PM fill:#3982CE,color:#fff
-    style REST fill:#339933,color:#fff
-    style RECV fill:#27ae60,color:#fff
+    EX -->|POST /chatbot| BOT
+    BOT -->|AI response| EX
+
+    style CLIENT fill:#20232A,color:#61DAFB
+    style WSS fill:#1a1a2e,color:#fff
+    style DB fill:#1e3a5f,color:#fff
+    style BOT fill:#3d5a00,color:#fff
+    style ONL fill:#4a0000,color:#fff
+    style MW fill:#5c3d00,color:#fff
 ```
 
 ---
 
-## ⚡ WebSocket Event Flow
+## ⚡ WebSocket Event Lifecycle
 
 ```mermaid
 sequenceDiagram
-    participant UA as 👤 User A (Sender)
-    participant S  as ⚡ Socket.io Server
-    participant DB as 🗄 Prisma + DB
-    participant UB as 👤 User B (Receiver)
+    participant UA as 👤 User A (Client)
+    participant WS as ⚡ WS Server
+    participant DB as 🗄 Prisma / DB
+    participant UB as 👤 User B (Client)
 
-    UA->>S: connect (with JWT token)
-    S-->>UA: connection_ack
+    Note over UA, UB: 1 — CONNECTION & AUTH
+    UA->>WS: WebSocket connect
+    UA->>WS: { type: "auth", userId }
+    WS-->>UA: { type: "initialOnlineUsers", onlineUsers[] }
+    WS-->>UB: { type: "userStatus", userId, isOnline: true }
 
-    UA->>S: emit('join_room', roomId)
-    S-->>UA: emit('room_history', messages[])
-    S-->>UB: emit('user_joined', userId)
+    Note over UA, UB: 2 — CONNECTION REQUEST (LinkedIn-style)
+    UA->>WS: { type: "connection_request", targetUserId }
+    WS->>DB: connections.create({ status: "pending" })
+    WS->>DB: notification.create({ type: "connection_request" })
+    WS-->>UA: { type: "connection-request-sent" }
+    WS-->>UB: { type: "newNotification", unreadCount }
+    WS-->>UB: { type: "connection-request-received", fromUserId }
 
-    UA->>S: emit('typing', roomId)
-    S-->>UB: emit('user_typing', username)
+    Note over UA, UB: 3 — ACCEPT / REJECT
+    UB->>WS: { type: "connection-response", response: "accepted" }
+    WS->>DB: connections.update({ status: "accepted" })
+    WS->>DB: notification.create({ type: "connection_accepted" })
+    WS-->>UA: { type: "newNotification" }
+    WS-->>UA: { type: "connection-established", withUserId }
+    WS-->>UB: { type: "connection-established", withUserId }
 
-    UA->>S: emit('send_message', content)
-    S->>DB: prisma.message.create(...)
-    DB-->>S: saved message object
-    S-->>UA: emit('receive_message', msg)
-    S-->>UB: emit('receive_message', msg)
+    Note over UA, UB: 4 — MESSAGING (only after accepted connection)
+    UA->>WS: { type: "typing", to: UB }
+    WS-->>UB: { type: "typing", from: UA }
 
-    UA->>S: disconnect
-    S-->>UB: emit('user_left', userId)
+    UA->>WS: { type: "message", content, receiverId }
+    WS->>DB: connections.findFirst — verify accepted connection
+    WS->>DB: message.create(...)
+    WS-->>UB: { type: "newMessage", content, unreadCount }
+
+    Note over UA, UB: 5 — READ RECEIPTS
+    UB->>WS: { type: "markRead", withUserId: UA }
+    WS->>DB: message.updateMany({ read: true })
+    WS-->>UA: { type: "messageRead", from: UB }
+
+    Note over UA, UB: 6 — DISCONNECT
+    UA->>WS: [connection closed]
+    Note over WS: 2s grace period timeout
+    WS-->>UB: { type: "userStatus", isOnline: false }
 ```
 
 ---
 
 ## ✨ Features
 
-### 💬 Real-Time Messaging
-- Instant message delivery using **Socket.io WebSockets** — zero polling, zero delays
-- **Live typing indicators** — see when someone is composing a message
-- **Room-based chat** — join specific rooms/channels to organize conversations
-- **Broadcast on disconnect** — users are notified when someone leaves
+### 🔐 Auth System
+- **Signup / Signin / Logout** via REST API
+- Passwords hashed with **bcryptjs** (10 salt rounds)
+- JWT issued on login and stored in **httpOnly, SameSite cookie** — invisible to JavaScript, XSS-resistant
+- Token is **verified on every protected REST route** via `authMiddleware`
+- WebSocket connections authenticate by sending `{ type: "auth", userId }` immediately after opening — unauthenticated messages are silently dropped
 
-### 🔐 Authentication & Security
-- Secure user registration and login via REST API
-- **JWT token passed during WebSocket handshake** to authenticate socket connections
-- Protected REST endpoints for room management and message history
+### 🤝 LinkedIn-Style Connection System
+- Users cannot message strangers — they must send a **connection request** first
+- Request creates a `Connections` record with `status: "pending"` in the DB
+- Target user receives a **real-time notification** via WebSocket
+- On accept/reject, the connection status is updated and **both users** are notified
+- Message delivery is **blocked at the server level** if no accepted connection exists
 
-### 🗄 Data Persistence with Prisma
-- All messages persisted via **Prisma ORM** — type-safe, migration-friendly
-- **Chat history** fetched on room join via REST API
-- Prisma schema enforces relational integrity between Users, Rooms, and Messages
+### 💬 Real-Time Direct & Public Messaging
+- **Direct Messages** — sent only to the target user's active WebSocket
+- **Public messages** — broadcast to all connected users (receiverId is null)
+- Every message is **persisted in the database** via Prisma before delivery
+- Real-time **unread message count** sent to receiver with each new message
 
-### 🎨 Frontend Experience
-- React-based responsive chat interface
-- Real-time state updates driven by Socket.io client events
-- Custom CSS for a clean, modern messaging look
+### 📖 Read Receipts
+- Client sends `markRead` WebSocket event when opening a conversation
+- Server updates `read: true` and `readAt` for all relevant messages
+- **Sender is notified** in real-time via `messageRead` event
+
+### 🟢 Live Presence Tracking
+- A `Set<userId>` tracks online users server-side
+- On connect: broadcasts `userStatus: online` + sends full `initialOnlineUsers` list to the new client
+- On disconnect: **2-second grace period** before broadcasting offline — handles brief reconnections gracefully
+
+### ⌨️ Typing Indicators
+- `typing` and `stop_typing` events forwarded directly to the target user's socket
+- Zero database writes — pure in-memory event forwarding
+
+### 🔔 Notification Engine
+- Persistent notifications stored in the `Notification` table
+- Types: `connection_request`, `connection_accepted`, `connection_rejected`
+- Real-time delivery via WebSocket with live **unread count** update
+- REST endpoints to fetch, mark as read, and respond to notifications
+
+### 👤 Rich User Profiles
+- Users can update: `name`, `username`, `description`, `location`, `profilePhoto`
+- Password change requires submitting the **current password** for verification
+- Prisma's `P2002` unique constraint error is caught and returned as a friendly message
+
+### 🤖 AI Chatbot Integration
+- POST `/chatbot` proxies to a **Python microservice** running on port 5001
+- Decoupled architecture — chatbot can be upgraded independently
+
+---
+
+## 🗄 Database Schema
+
+```
+User
+├── id, username (unique), password, email
+├── name, description, location, profilePhoto
+└── createdAt
+
+Message
+├── id, content
+├── senderId → User
+├── receiverId → User (null = public message)
+├── read (bool), readAt
+└── createdAt
+
+Connections
+├── requesterId → User
+├── addresseeId → User
+├── status: "pending" | "accepted" | "rejected"
+└── createdAt
+     [Unique: requesterId + addresseeId]
+
+Notification
+├── id, type, content
+├── userId → User (recipient)
+├── fromUserId → User (sender)
+├── isRead (bool), responseStatus
+└── createdAt
+```
 
 ---
 
@@ -188,35 +271,28 @@ sequenceDiagram
 ```
 Chat-Application/
 │
-├── backend/                         # Node.js + Express + Socket.io server
+├── backend/
 │   ├── prisma/
-│   │   └── schema.prisma            # Data models: User, Room, Message
-│   ├── routes/
-│   │   ├── auth.js                  # POST /api/auth/register, /login
-│   │   └── rooms.js                 # GET /api/rooms, POST /api/rooms
-│   ├── middleware/
-│   │   └── authMiddleware.js        # JWT verification
-│   ├── socket/
-│   │   └── socketHandler.js         # All Socket.io event listeners
-│   └── server.js                    # Express + Socket.io bootstrap
+│   │   └── schema.prisma         # User, Message, Connections, Notification models
+│   ├── server.js                 # Entire backend: Express + WS server (port 3000)
+│   │   ├── REST routes           # Auth, users, messages, notifications, connections
+│   │   ├── authMiddleware        # Inline JWT cookie verification
+│   │   ├── WebSocketServer       # ws event handlers
+│   │   ├── clients{}             # userId → WebSocket live map
+│   │   ├── onlineUsers (Set)     # Real-time presence tracking
+│   │   └── Helper functions      # broadcastUserStatus, sendCurrentOnlineUsers
+│   └── .env                      # JWT_SECRET, DATABASE_URL, NODE_ENV
 │
 ├── frontend/
-│   └── frontend-project/            # React application
+│   └── frontend-project/         # React application
 │       ├── src/
-│       │   ├── components/
-│       │   │   ├── ChatWindow.jsx   # Main messaging UI
-│       │   │   ├── MessageBox.jsx   # Individual message bubble
-│       │   │   ├── RoomList.jsx     # Sidebar: available rooms
-│       │   │   └── TypingBadge.jsx  # Typing indicator
-│       │   ├── context/
-│       │   │   └── SocketContext.js # Global socket via Context API
-│       │   ├── pages/
-│       │   │   ├── Login.jsx
-│       │   │   └── Chat.jsx
+│       │   ├── components/       # ChatWindow, MessageBubble, UserList, Notifications
+│       │   ├── context/          # WebSocket context (global WS instance)
+│       │   ├── pages/            # Login, Signup, Chat, Profile
 │       │   └── App.js
 │       └── public/
 │
-├── *.py                             # Python utility / helper scripts
+├── *.py                          # Python chatbot microservice (port 5001)
 └── README.md
 ```
 
@@ -225,30 +301,30 @@ Chat-Application/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v16+)
-- A database supported by Prisma (PostgreSQL recommended, SQLite for local dev)
+- Node.js v16+
+- A Prisma-compatible database (PostgreSQL recommended)
+- Python 3 (for the chatbot service)
 
 ### Backend Setup
 
 ```bash
-# Navigate to backend
 cd backend
 
-# Install dependencies
 npm install
 
-# Configure environment variables
-cp .env.example .env
-# Edit .env: set DATABASE_URL, JWT_SECRET, PORT
+# Configure environment
+echo "DATABASE_URL=postgresql://user:pass@localhost:5432/chatdb
+JWT_SECRET=your_super_secret_key
+NODE_ENV=development" > .env
 
-# Run Prisma migrations
+# Run DB migrations
 npx prisma migrate dev --name init
 
 # Generate Prisma client
 npx prisma generate
 
-# Start the server
-npm start
+# Start server (REST + WebSocket on port 3000)
+node server.js
 ```
 
 ### Frontend Setup
@@ -257,38 +333,95 @@ npm start
 cd frontend/frontend-project
 
 npm install
-
 npm start
 ```
 
-The app runs on `http://localhost:3000` (frontend) and `http://localhost:5000` (backend + Socket.io).
+### Python Chatbot (Optional)
+
+```bash
+# From root directory
+python chatbot.py   # Starts on port 5001
+```
 
 ---
 
-## 📡 API & Socket Events Reference
+## 📡 Complete API Reference
 
-### REST Endpoints
+### Auth
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|:---:|
-| `POST` | `/api/auth/register` | Register a new user | ❌ |
-| `POST` | `/api/auth/login` | Login, receive JWT | ❌ |
-| `GET` | `/api/rooms` | List all chat rooms | ✅ |
-| `POST` | `/api/rooms` | Create a new room | ✅ |
-| `GET` | `/api/rooms/:id/messages` | Fetch message history | ✅ |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|:----:|
+| `POST` | `/api/signup` | Register new user, sets JWT cookie | ❌ |
+| `POST` | `/api/signin` | Login, sets JWT cookie | ❌ |
+| `POST` | `/api/logout` | Clears JWT cookie | ❌ |
+| `GET` | `/api/me` | Get current user profile | ✅ |
+| `PUT` | `/user/:id` | Update profile / change password | ✅ |
+| `DELETE` | `/api/delete-user/:userId` | Delete user + all related data | ❌ |
 
-### Socket.io Events
+### Users & Connections
 
-| Direction | Event | Payload | Description |
-|-----------|-------|---------|-------------|
-| Client → Server | `join_room` | `{ roomId }` | Join a chat room |
-| Client → Server | `send_message` | `{ roomId, content }` | Send a message |
-| Client → Server | `typing` | `{ roomId }` | Notify others of typing |
-| Server → Client | `receive_message` | `{ id, content, sender, timestamp }` | Broadcast new message |
-| Server → Client | `room_history` | `[messages]` | Past messages on room join |
-| Server → Client | `user_typing` | `{ userId, username }` | Someone is composing |
-| Server → Client | `user_joined` | `{ userId, username }` | New user joined room |
-| Server → Client | `user_left` | `{ userId }` | User disconnected |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|:----:|
+| `GET` | `/api/users` | List all users (except self) | ✅ |
+| `GET` | `/user/:userid` | Get public profile by ID | ❌ |
+| `GET` | `/connected` | Get all accepted connections | ✅ |
+
+### Messages
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|:----:|
+| `GET` | `/api/messages/:withUserId` | Fetch DM history with a user | ✅ |
+| `GET` | `/api/public-messages` | Fetch all public messages | ✅ |
+| `GET` | `/api/chat-users` | Get recent chats with last msg + unread count | ✅ |
+| `GET` | `/unread-senders` | Count senders with unread messages | ✅ |
+| `POST` | `/messages/mark-read/:senderId` | Mark all messages from sender as read | ✅ |
+| `DELETE` | `/api/delete-chats` | Delete all messages between two users | ❌ |
+
+### Notifications
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|:----:|
+| `GET` | `/api/notifications` | Fetch all notifications | Cookie |
+| `GET` | `/api/notifications/unreadCount` | Get unread notification count | ✅ |
+| `POST` | `/api/notifications/read` | Mark a notification as read | ❌ |
+| `POST` | `/api/notifications/respond` | Accept/reject a connection request | Cookie |
+
+### Other
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|:----:|
+| `POST` | `/chatbot` | Proxy message to Python AI chatbot | ❌ |
+
+---
+
+## 📡 WebSocket Events Reference
+
+### Client → Server
+
+| Event `type` | Key Payload Fields | Description |
+|---|---|---|
+| `auth` | `userId` | Authenticate socket immediately after connecting |
+| `message` | `content`, `receiverId` | Send a DM (`receiverId` set) or public message (null) |
+| `markRead` | `withUserId` | Mark all DMs from a user as read |
+| `connection_request` | `targetUserId` | Send a connection request |
+| `connection-response` | `fromUserId`, `response` | Accept / reject a connection (`"accepted"` or `"rejected"`) |
+| `typing` | `to` | Notify a user you are typing |
+| `stop_typing` | `to` | Notify a user you stopped typing |
+
+### Server → Client
+
+| Event `type` | Key Payload Fields | Description |
+|---|---|---|
+| `initialOnlineUsers` | `onlineUsers[]` | Full online user list on first connect |
+| `userStatus` | `userId`, `isOnline` | Presence update broadcast |
+| `newMessage` | `from`, `content`, `timestamp`, `unreadCount` | Incoming DM notification |
+| `messageRead` | `from` | Receiver has read your messages |
+| `newNotification` | `notification{}`, `unreadCount` | New in-app notification |
+| `connection-request-received` | `fromUserId` | Incoming connection request |
+| `connection-request-sent` | `toUserId` | Confirms your request was sent |
+| `connection-response-confirmed` | `toUserId`, `response` | Confirms your accept/reject was processed |
+| `connection-established` | `withUserId` | Both users notified of successful connection |
+| `error` | `message` | Server-side error feedback |
 
 ---
 
@@ -296,17 +429,20 @@ The app runs on `http://localhost:3000` (frontend) and `http://localhost:5000` (
 
 | Decision | Rationale |
 |---|---|
-| **Socket.io over raw WebSockets** | Built-in reconnection, room namespacing, and HTTP long-polling fallback |
-| **Prisma over raw SQL** | Type-safe queries, auto-generated client, painless schema migrations |
-| **JWT in WebSocket handshake** | Secures socket connections at the protocol level without a separate auth layer |
-| **REST for history, Sockets for live** | Clean separation of concerns — HTTP for CRUD, WebSocket for events |
-| **React Context for Socket instance** | Avoids prop-drilling — single socket instance globally available across all components |
+| **Native `ws` over Socket.io** | No abstraction overhead; fine-grained control over every event and connection lifecycle |
+| **Single unified server** | Express HTTP and WebSocket share one `http.Server` — simpler deployment, no CORS/port issues |
+| **JWT in httpOnly cookies** | Tokens cannot be accessed by JavaScript — eliminates XSS-based token theft |
+| **WS auth via message, not headers** | Browser WebSocket API does not support custom headers; auth message on open is the correct pattern |
+| **Accepted connection required to message** | Prevents spam; mirrors real-world platforms like LinkedIn |
+| **2-second offline grace period** | Handles brief network flaps/reconnects without falsely broadcasting offline status |
+| **Python chatbot as a microservice** | Keeps AI logic decoupled; can be scaled or swapped independently of the Node.js server |
+| **Prisma over raw SQL** | Type-safe queries, auto-generated client, and schema-as-code with migrations |
 
 ---
 
 ## 🤝 Contributing
 
-Pull requests are welcome! Please open an issue first to discuss any significant changes.
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ---
 
