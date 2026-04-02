@@ -75,9 +75,9 @@ flowchart TD
 
     subgraph NODE["🟢 Node.js Unified Server · Port 3000"]
         direction TB
-        EXP[Express Router\n20+ REST Endpoints]
-        AUTH_MW[authMiddleware\nJWT Cookie → req.userId]
-        WSS[WebSocket Server · ws\nclients map: userId → socket\nonlineUsers Set]
+        EXP[Express Router - 20+ REST Endpoints]
+        AUTH_MW[authMiddleware - JWT Cookie to req.userId]
+        WSS[WebSocket Server ws - clients map and onlineUsers Set]
     end
 
     subgraph WS_EVENTS["⚡ WebSocket Event Handlers"]
@@ -100,8 +100,8 @@ flowchart TD
     subgraph PYTHON["🤖 Python Flask AI Service · Port 5001"]
         FLASK[Flask /chat endpoint]
         LC[LangChain LLMChain]
-        MEM[ConversationBufferMemory\nper session_id]
-        GEMINI[Google Gemini API\nChatGoogleGenerativeAI]
+        MEM[ConversationBufferMemory per session_id]
+        GEMINI[Google Gemini - ChatGoogleGenerativeAI]
     end
 
     UI --> REST_C
@@ -114,11 +114,11 @@ flowchart TD
     WSC <-->|Persistent WebSocket| WSS
     WSS --> WS_EVENTS
 
-    EV_AUTH -->|Register in clients map\nBroadcast online status| WSS
-    EV_MSG -->|Verify accepted connection\nPersist + deliver| PRISMA
-    EV_READ -->|Update read + readAt\nNotify sender| PRISMA
-    EV_CREQ -->|Create pending Connections\nCreate Notification\nDeliver real-time| PRISMA
-    EV_CRES -->|Update Connection status\nCreate Notification\nBroadcast established| PRISMA
+    EV_AUTH -->|Register socket + broadcast online| WSS
+    EV_MSG -->|Verify connection + persist + deliver| PRISMA
+    EV_READ -->|Update read status + notify sender| PRISMA
+    EV_CREQ -->|Create pending Connection + Notification| PRISMA
+    EV_CRES -->|Update status + notify + broadcast established| PRISMA
     EV_TYPE -->|Forward to target socket| WSS
 
     EXP --> PRISMA
@@ -281,25 +281,25 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    A([👤 User types message\nin Chat UI]) -->|POST /chatbot\n{ message, session_id }| B[Node.js Express\nProxy Route]
+    A([User sends message]) -->|POST /chatbot| B[Node.js Express Proxy]
 
-    B -->|axios.post\nhttp://localhost:5001/chat| C[Flask Server\nPort 5001]
+    B -->|axios POST localhost:5001/chat| C[Flask Server Port 5001]
 
-    C --> D{session_id\nin session_chains?}
+    C --> D{session_id in session_chains?}
 
-    D -->|No — first message| E[Create LLMChain\n+ ConversationBufferMemory\nfor this session_id]
-    D -->|Yes — returning user| F[Load existing\nConversationBufferMemory\nwith history]
+    D -->|No - first message| E[Create new LLMChain + ConversationBufferMemory]
+    D -->|Yes - returning user| F[Load existing ConversationBufferMemory with history]
 
-    E --> G[LangChain LLMChain.run\nPromptTemplate fills history + input]
+    E --> G[LLMChain.run - PromptTemplate fills history and input]
     F --> G
 
-    G -->|API call| H[Google Gemini\nChatGoogleGenerativeAI]
+    G -->|API call| H[Google Gemini - ChatGoogleGenerativeAI]
     H -->|AI response text| G
-    G -->|Appends to memory| I[(session_chains dict\nin-memory store)]
+    G -->|Save to memory| I[(session_chains - in-memory dict)]
 
     G -->|response string| C
-    C -->|{ response }| B
-    B -->|{ response }| A
+    C -->|response JSON| B
+    B -->|response JSON| A
 
     style H fill:#4285F4,color:#fff
     style C fill:#1a1a00,color:#FFD700
