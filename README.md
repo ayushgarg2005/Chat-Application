@@ -2,13 +2,17 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
-[![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=websocket&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
+[![WebSocket](https://img.shields.io/badge/WebSocket_ws-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://github.com/websockets/ws)
 [![Prisma](https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white)](https://www.prisma.io)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
+[![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain.com)
+[![Google Gemini](https://img.shields.io/badge/Google_Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini)
 [![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=JSON%20web%20tokens&logoColor=white)](https://jwt.io)
-[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-> A **production-grade real-time chat platform** built with native **WebSockets (`ws`)**, **Prisma ORM**, and **JWT cookie-based auth**. Features include a LinkedIn-style **connection system**, **live presence tracking**, **typing indicators**, **unread message counts**, an **in-app notification engine**, and a **Python-powered AI chatbot** integration — all on a single Node.js server.
+> A **production-grade real-time social messaging platform** with a LinkedIn-style **connection system**, native **WebSocket** messaging, live **presence tracking**, **read receipts**, **in-app notifications**, and a session-aware **AI chatbot** powered by Google Gemini and LangChain — all running across a unified Node.js server and a decoupled Python Flask microservice.
 
 ---
 
@@ -16,11 +20,13 @@
 
 - [Overview](#-overview)
 - [Tech Stack](#-tech-stack)
-- [Architecture & Flow Diagram](#-architecture--flow-diagram)
-- [WebSocket Event Lifecycle](#-websocket-event-lifecycle)
-- [Features](#-features)
+- [System Architecture](#-system-architecture)
 - [Database Schema](#-database-schema)
+- [WebSocket Lifecycle Diagram](#-websocket-lifecycle-diagram)
+- [AI Chatbot Flow](#-ai-chatbot-flow)
+- [Features](#-features)
 - [Project Structure](#-project-structure)
+- [Environment Variables](#-environment-variables)
 - [Getting Started](#-getting-started)
 - [Complete API Reference](#-complete-api-reference)
 - [WebSocket Events Reference](#-websocket-events-reference)
@@ -30,239 +36,336 @@
 
 ## 🔍 Overview
 
-This is not a basic chat app. It is a **social messaging platform** where users must first establish a **connection** (like LinkedIn) before they can message each other. The backend runs a unified **Express + WebSocket server** — both HTTP REST and WebSocket traffic share a single Node.js `http.Server` instance, keeping deployment simple.
+This is not a basic chat application. It is a **full-stack social messaging platform** with three distinct layers:
 
-Authentication uses **JWT stored in httpOnly cookies**, which are automatically sent with every REST request. WebSocket connections are authenticated via an explicit `auth` event immediately after the socket opens.
+1. **Node.js Server (port 3000)** — A unified Express + WebSocket server handling all REST API routes and real-time WebSocket events on a single `http.Server` instance.
+2. **PostgreSQL + Prisma** — A relational database with a type-safe ORM layer managing Users, Messages, Connections, and Notifications with referential integrity.
+3. **Python Flask AI Service (port 5001)** — A decoupled microservice running **LangChain + Google Gemini**, maintaining per-session conversation memory for a persistent AI chatbot experience.
+
+Authentication uses **JWT stored in `httpOnly` cookies** — tokens are never exposed to JavaScript, eliminating XSS-based token theft. WebSocket connections are independently authenticated via an `auth` message event immediately after the socket opens, since the browser's native WebSocket API does not support custom headers.
+
+Users must establish a **Connection** (like LinkedIn) before they can exchange messages — enforced at the server level on every message event.
 
 ---
 
 ## 🛠 Tech Stack
 
-| Layer | Technology | Why This Choice |
+| Layer | Technology | Role |
 |---|---|---|
-| **Runtime** | Node.js | Non-blocking I/O — ideal for real-time |
-| **HTTP Framework** | Express.js | REST API routing + middleware |
-| **WebSocket** | `ws` (native) | Lightweight, no abstraction overhead vs Socket.io |
-| **ORM** | Prisma | Type-safe DB queries, auto migrations |
-| **Auth** | JWT + `httpOnly` cookies | Secure, XSS-resistant token storage |
-| **Password Hashing** | bcryptjs | Industry-standard salted hashing |
-| **Frontend** | React.js + CSS3 | Component-driven real-time UI |
-| **AI Chatbot** | Python service (port 5001) | Decoupled microservice for chatbot logic |
+| **Frontend** | React.js + Tailwind CSS | UI, real-time state updates |
+| **HTTP Server** | Node.js + Express.js | REST API, cookie auth, proxy to chatbot |
+| **Real-Time** | `ws` (native WebSocket) | Bi-directional persistent messaging |
+| **ORM** | Prisma | Type-safe DB queries, migrations |
+| **Database** | PostgreSQL | Persistent storage for all entities |
+| **Auth** | JWT + `httpOnly` cookies + bcryptjs | Secure stateless auth |
+| **AI Chatbot** | Python Flask + LangChain + Google Gemini | Session-based AI conversation |
+| **AI Memory** | `ConversationBufferMemory` (LangChain) | Per-session chat history for Gemini |
 
 ---
 
-## 🗺 Architecture & Flow Diagram
+## 🗺 System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph CLIENT["⚛️ React Frontend"]
-        UI[Chat UI]
-        WC[Native WebSocket Client]
-        RC[REST Client · Axios/Fetch]
+    subgraph FE["⚛️ React + Tailwind Frontend"]
+        UI[Chat UI / Notifications / Profile]
+        WSC[Native WebSocket Client]
+        REST_C[HTTP Client · Axios/Fetch]
     end
 
-    subgraph SERVER["🟢 Unified Node.js Server · Port 3000"]
-        EX[Express REST Router]
-        MW[Auth Middleware\nJWT Cookie Verify]
-        WSS[WebSocket Server · ws\nclients map: userId → socket]
-        ONL[Online Users Set]
+    subgraph NODE["🟢 Node.js Unified Server · Port 3000"]
+        direction TB
+        EXP[Express Router\n20+ REST Endpoints]
+        AUTH_MW[authMiddleware\nJWT Cookie → req.userId]
+        WSS[WebSocket Server · ws\nclients map: userId → socket\nonlineUsers Set]
     end
 
-    subgraph WSEVENTS["⚡ WebSocket Event Bus"]
-        AUTH_EV[auth]
-        MSG_EV[message]
-        MARK_EV[markRead]
-        CONN_REQ[connection_request]
-        CONN_RES[connection-response]
-        TYPING_EV[typing · stop_typing]
+    subgraph WS_EVENTS["⚡ WebSocket Event Handlers"]
+        EV_AUTH[auth]
+        EV_MSG[message]
+        EV_READ[markRead]
+        EV_CREQ[connection_request]
+        EV_CRES[connection-response]
+        EV_TYPE[typing / stop_typing]
     end
 
-    subgraph ORM["🔷 Prisma ORM"]
-        PC[Prisma Client]
+    subgraph PRISMA["🔷 Prisma ORM · PostgreSQL"]
+        direction LR
+        M_USER[(User)]
+        M_MSG[(Message)]
+        M_CONN[(Connections)]
+        M_NOTIF[(Notification)]
     end
 
-    subgraph DB["🗄 Database"]
-        TU[(User)]
-        TM[(Message)]
-        TC[(Connections)]
-        TN[(Notification)]
+    subgraph PYTHON["🤖 Python Flask AI Service · Port 5001"]
+        FLASK[Flask /chat endpoint]
+        LC[LangChain LLMChain]
+        MEM[ConversationBufferMemory\nper session_id]
+        GEMINI[Google Gemini API\nChatGoogleGenerativeAI]
     end
 
-    subgraph BOT["🤖 Python Chatbot\nPort 5001"]
-        PY[/chat endpoint/]
-    end
+    UI --> REST_C
+    UI --> WSC
 
-    UI --> RC
-    UI --> WC
+    REST_C -->|HTTP + Cookie| EXP
+    EXP --> AUTH_MW
+    AUTH_MW -->|req.userId set| EXP
 
-    RC -->|HTTP + Cookie| EX
-    EX --> MW
-    MW -->|Authenticated| EX
-    EX --> PC
+    WSC <-->|Persistent WebSocket| WSS
+    WSS --> WS_EVENTS
 
-    WC <-->|Persistent WS| WSS
-    WSS --> WSEVENTS
+    EV_AUTH -->|Register in clients map\nBroadcast online status| WSS
+    EV_MSG -->|Verify accepted connection\nPersist + deliver| PRISMA
+    EV_READ -->|Update read + readAt\nNotify sender| PRISMA
+    EV_CREQ -->|Create pending Connections\nCreate Notification\nDeliver real-time| PRISMA
+    EV_CRES -->|Update Connection status\nCreate Notification\nBroadcast established| PRISMA
+    EV_TYPE -->|Forward to target socket| WSS
 
-    AUTH_EV -->|Register socket| ONL
-    MSG_EV -->|Check connection\nStore + Broadcast| PC
-    MARK_EV -->|Update read status| PC
-    CONN_REQ -->|Create pending\nNotify target| PC
-    CONN_RES -->|Update status\nNotify requester| PC
-    TYPING_EV -->|Forward to target| WSS
+    EXP --> PRISMA
+    EXP -->|POST /chatbot proxy| FLASK
 
-    PC --> TU
-    PC --> TM
-    PC --> TC
-    PC --> TN
+    FLASK --> LC
+    LC --> MEM
+    LC --> GEMINI
+    GEMINI -->|AI response| FLASK
+    FLASK -->|response JSON| EXP
 
-    EX -->|POST /chatbot| BOT
-    BOT -->|AI response| EX
-
-    style CLIENT fill:#20232A,color:#61DAFB
-    style WSS fill:#1a1a2e,color:#fff
-    style DB fill:#1e3a5f,color:#fff
-    style BOT fill:#3d5a00,color:#fff
-    style ONL fill:#4a0000,color:#fff
-    style MW fill:#5c3d00,color:#fff
+    style FE fill:#1a1a2e,color:#61DAFB
+    style NODE fill:#1b3a1b,color:#90EE90
+    style PRISMA fill:#1a2a4a,color:#87CEEB
+    style PYTHON fill:#3a2a00,color:#FFD700
+    style WSS fill:#2a0a2a,color:#DDA0DD
 ```
-
----
-
-## ⚡ WebSocket Event Lifecycle
-
-```mermaid
-sequenceDiagram
-    participant UA as 👤 User A (Client)
-    participant WS as ⚡ WS Server
-    participant DB as 🗄 Prisma / DB
-    participant UB as 👤 User B (Client)
-
-    Note over UA, UB: 1 — CONNECTION & AUTH
-    UA->>WS: WebSocket connect
-    UA->>WS: { type: "auth", userId }
-    WS-->>UA: { type: "initialOnlineUsers", onlineUsers[] }
-    WS-->>UB: { type: "userStatus", userId, isOnline: true }
-
-    Note over UA, UB: 2 — CONNECTION REQUEST (LinkedIn-style)
-    UA->>WS: { type: "connection_request", targetUserId }
-    WS->>DB: connections.create({ status: "pending" })
-    WS->>DB: notification.create({ type: "connection_request" })
-    WS-->>UA: { type: "connection-request-sent" }
-    WS-->>UB: { type: "newNotification", unreadCount }
-    WS-->>UB: { type: "connection-request-received", fromUserId }
-
-    Note over UA, UB: 3 — ACCEPT / REJECT
-    UB->>WS: { type: "connection-response", response: "accepted" }
-    WS->>DB: connections.update({ status: "accepted" })
-    WS->>DB: notification.create({ type: "connection_accepted" })
-    WS-->>UA: { type: "newNotification" }
-    WS-->>UA: { type: "connection-established", withUserId }
-    WS-->>UB: { type: "connection-established", withUserId }
-
-    Note over UA, UB: 4 — MESSAGING (only after accepted connection)
-    UA->>WS: { type: "typing", to: UB }
-    WS-->>UB: { type: "typing", from: UA }
-
-    UA->>WS: { type: "message", content, receiverId }
-    WS->>DB: connections.findFirst — verify accepted connection
-    WS->>DB: message.create(...)
-    WS-->>UB: { type: "newMessage", content, unreadCount }
-
-    Note over UA, UB: 5 — READ RECEIPTS
-    UB->>WS: { type: "markRead", withUserId: UA }
-    WS->>DB: message.updateMany({ read: true })
-    WS-->>UA: { type: "messageRead", from: UB }
-
-    Note over UA, UB: 6 — DISCONNECT
-    UA->>WS: [connection closed]
-    Note over WS: 2s grace period timeout
-    WS-->>UB: { type: "userStatus", isOnline: false }
-```
-
----
-
-## ✨ Features
-
-### 🔐 Auth System
-- **Signup / Signin / Logout** via REST API
-- Passwords hashed with **bcryptjs** (10 salt rounds)
-- JWT issued on login and stored in **httpOnly, SameSite cookie** — invisible to JavaScript, XSS-resistant
-- Token is **verified on every protected REST route** via `authMiddleware`
-- WebSocket connections authenticate by sending `{ type: "auth", userId }` immediately after opening — unauthenticated messages are silently dropped
-
-### 🤝 LinkedIn-Style Connection System
-- Users cannot message strangers — they must send a **connection request** first
-- Request creates a `Connections` record with `status: "pending"` in the DB
-- Target user receives a **real-time notification** via WebSocket
-- On accept/reject, the connection status is updated and **both users** are notified
-- Message delivery is **blocked at the server level** if no accepted connection exists
-
-### 💬 Real-Time Direct & Public Messaging
-- **Direct Messages** — sent only to the target user's active WebSocket
-- **Public messages** — broadcast to all connected users (receiverId is null)
-- Every message is **persisted in the database** via Prisma before delivery
-- Real-time **unread message count** sent to receiver with each new message
-
-### 📖 Read Receipts
-- Client sends `markRead` WebSocket event when opening a conversation
-- Server updates `read: true` and `readAt` for all relevant messages
-- **Sender is notified** in real-time via `messageRead` event
-
-### 🟢 Live Presence Tracking
-- A `Set<userId>` tracks online users server-side
-- On connect: broadcasts `userStatus: online` + sends full `initialOnlineUsers` list to the new client
-- On disconnect: **2-second grace period** before broadcasting offline — handles brief reconnections gracefully
-
-### ⌨️ Typing Indicators
-- `typing` and `stop_typing` events forwarded directly to the target user's socket
-- Zero database writes — pure in-memory event forwarding
-
-### 🔔 Notification Engine
-- Persistent notifications stored in the `Notification` table
-- Types: `connection_request`, `connection_accepted`, `connection_rejected`
-- Real-time delivery via WebSocket with live **unread count** update
-- REST endpoints to fetch, mark as read, and respond to notifications
-
-### 👤 Rich User Profiles
-- Users can update: `name`, `username`, `description`, `location`, `profilePhoto`
-- Password change requires submitting the **current password** for verification
-- Prisma's `P2002` unique constraint error is caught and returned as a friendly message
-
-### 🤖 AI Chatbot Integration
-- POST `/chatbot` proxies to a **Python microservice** running on port 5001
-- Decoupled architecture — chatbot can be upgraded independently
 
 ---
 
 ## 🗄 Database Schema
 
+```mermaid
+erDiagram
+    User {
+        Int     id          PK
+        String  username    UNIQUE
+        String  email       UNIQUE_NULL
+        String  password
+        String  name
+        String  description
+        String  profilePhoto
+        String  location
+        DateTime createdAt
+    }
+
+    Message {
+        Int      id          PK
+        String   content
+        Int      senderId    FK
+        Int      receiverId  FK_NULL
+        Boolean  read
+        DateTime readAt      NULL
+        DateTime createdAt
+    }
+
+    Connections {
+        Int      id           PK
+        Int      requesterId  FK
+        Int      addresseeId  FK
+        String   status
+        DateTime createdAt
+    }
+
+    Notification {
+        Int            id             PK
+        Int            userId         FK
+        Int            fromUserId     FK_NULL
+        NotificationType type
+        String         content
+        Boolean        isRead
+        ResponseStatus responseStatus NULL
+        DateTime       createdAt
+    }
+
+    User ||--o{ Message        : "sends (SentMessages)"
+    User ||--o{ Message        : "receives (ReceivedMessages)"
+    User ||--o{ Connections    : "RequesterConnections"
+    User ||--o{ Connections    : "AddresseeConnections"
+    User ||--o{ Notification   : "receives"
+    User ||--o{ Notification   : "triggers (NotificationFromUser)"
 ```
-User
-├── id, username (unique), password, email
-├── name, description, location, profilePhoto
-└── createdAt
 
-Message
-├── id, content
-├── senderId → User
-├── receiverId → User (null = public message)
-├── read (bool), readAt
-└── createdAt
+**Enums defined in schema:**
+- `NotificationType`: `message` | `connection_request` | `connection_accepted` | `connection_rejected`
+- `ResponseStatus`: `accepted` | `rejected`
+- `Connections.status` (String): `"pending"` | `"accepted"` | `"rejected"`
+- `Connections` composite unique constraint: `@@unique([requesterId, addresseeId])`
+- `Message.receiverId = null` → **public message** (broadcast to all)
 
-Connections
-├── requesterId → User
-├── addresseeId → User
-├── status: "pending" | "accepted" | "rejected"
-└── createdAt
-     [Unique: requesterId + addresseeId]
+---
 
-Notification
-├── id, type, content
-├── userId → User (recipient)
-├── fromUserId → User (sender)
-├── isRead (bool), responseStatus
-└── createdAt
+## ⚡ WebSocket Lifecycle Diagram
+
+```mermaid
+sequenceDiagram
+    participant UA as 👤 User A
+    participant SRV as ⚡ WS Server (Node.js)
+    participant DB  as 🗄 Prisma / PostgreSQL
+    participant UB  as 👤 User B
+
+    rect rgb(20, 40, 20)
+        Note over UA,UB: PHASE 1 — Connect & Authenticate
+        UA->>SRV: WebSocket connect
+        UA->>SRV: { type: "auth", userId: A }
+        SRV->>SRV: clients[A] = socket · onlineUsers.add(A)
+        SRV-->>UA: { type: "initialOnlineUsers", onlineUsers[] }
+        SRV-->>UB: { type: "userStatus", userId: A, isOnline: true }
+    end
+
+    rect rgb(20, 20, 60)
+        Note over UA,UB: PHASE 2 — Connection Request (LinkedIn-style)
+        UA->>SRV: { type: "connection_request", targetUserId: B }
+        SRV->>DB: connections.findUnique — check duplicate
+        SRV->>DB: connections.create { status: "pending" }
+        SRV->>DB: notification.create { type: "connection_request" }
+        SRV->>DB: notification.count { isRead: false } → unreadCount
+        SRV-->>UA: { type: "connection-request-sent", toUserId: B }
+        SRV-->>UB: { type: "newNotification", notification{}, unreadCount }
+        SRV-->>UB: { type: "connection-request-received", fromUserId: A }
+    end
+
+    rect rgb(60, 20, 20)
+        Note over UA,UB: PHASE 3 — Accept / Reject
+        UB->>SRV: { type: "connection-response", fromUserId: A, response: "accepted" }
+        SRV->>DB: connections.update { status: "accepted" }
+        SRV->>DB: notification.create { type: "connection_accepted" }
+        SRV->>DB: notification.updateMany — mark original request as read
+        SRV-->>UA: { type: "newNotification", unreadCount }
+        SRV-->>UA: { type: "connection-established", withUserId: B }
+        SRV-->>UB: { type: "connection-response-confirmed", response: "accepted" }
+        SRV-->>UB: { type: "connection-established", withUserId: A }
+    end
+
+    rect rgb(20, 50, 50)
+        Note over UA,UB: PHASE 4 — Messaging (only after accepted connection)
+        UA->>SRV: { type: "typing", to: B }
+        SRV-->>UB: { type: "typing", from: A }
+
+        UA->>SRV: { type: "message", content: "Hello", receiverId: B }
+        SRV->>DB: connections.findFirst — verify accepted connection
+        SRV->>DB: message.create { senderId: A, receiverId: B }
+        SRV->>DB: message.count { read: false } → unreadCount
+        SRV-->>UB: { type: "newMessage", from: A, content, unreadCount }
+
+        UA->>SRV: { type: "stop_typing", to: B }
+        SRV-->>UB: { type: "stop_typing", from: A }
+    end
+
+    rect rgb(50, 40, 10)
+        Note over UA,UB: PHASE 5 — Read Receipts
+        UB->>SRV: { type: "markRead", withUserId: A }
+        SRV->>DB: message.updateMany { read: true, readAt: now() }
+        SRV-->>UA: { type: "messageRead", from: B }
+    end
+
+    rect rgb(40, 10, 40)
+        Note over UA,UB: PHASE 6 — Disconnect (with grace period)
+        UA->>SRV: [socket close]
+        SRV->>SRV: delete clients[A]
+        Note over SRV: setTimeout 2000ms — grace period
+        SRV->>SRV: onlineUsers.delete(A)
+        SRV-->>UB: { type: "userStatus", userId: A, isOnline: false }
+    end
 ```
+
+---
+
+## 🤖 AI Chatbot Flow
+
+```mermaid
+flowchart LR
+    A([👤 User types message\nin Chat UI]) -->|POST /chatbot\n{ message, session_id }| B[Node.js Express\nProxy Route]
+
+    B -->|axios.post\nhttp://localhost:5001/chat| C[Flask Server\nPort 5001]
+
+    C --> D{session_id\nin session_chains?}
+
+    D -->|No — first message| E[Create LLMChain\n+ ConversationBufferMemory\nfor this session_id]
+    D -->|Yes — returning user| F[Load existing\nConversationBufferMemory\nwith history]
+
+    E --> G[LangChain LLMChain.run\nPromptTemplate fills history + input]
+    F --> G
+
+    G -->|API call| H[Google Gemini\nChatGoogleGenerativeAI]
+    H -->|AI response text| G
+    G -->|Appends to memory| I[(session_chains dict\nin-memory store)]
+
+    G -->|response string| C
+    C -->|{ response }| B
+    B -->|{ response }| A
+
+    style H fill:#4285F4,color:#fff
+    style C fill:#1a1a00,color:#FFD700
+    style I fill:#2a0a0a,color:#FFB6C1
+```
+
+**Chatbot key behaviour:**
+- Each `session_id` gets its own `ConversationBufferMemory` — Gemini remembers the full conversation history within a session
+- Custom `PromptTemplate` gives the AI its persona: **"LangBot, a helpful AI assistant"**
+- Sessions live in an **in-memory Python dict** (`session_chains`) — restarting the Flask server clears all session histories
+- Node.js proxies the request, keeping the Gemini API key fully server-side (never exposed to the browser)
+
+---
+
+## ✨ Features
+
+### 🔐 Auth System (Cookie-Based JWT)
+- **Signup / Signin / Logout** via REST — passwords hashed with **bcryptjs (10 salt rounds)**
+- JWT issued on login, stored in an **`httpOnly`, `SameSite: lax` cookie** — inaccessible to JavaScript, immune to XSS
+- `authMiddleware` verifies the cookie and sets `req.userId` for every protected route
+- Password change flow requires submitting `currentPassword` for verification before accepting a new hash
+- Prisma `P2002` unique constraint violations are caught and returned as human-readable conflict errors
+
+### 🤝 LinkedIn-Style Connection System
+- Users **cannot message strangers** — a connection request must be sent and accepted first
+- Connection state machine: `pending` → `accepted` | `rejected`
+- Composite unique constraint `@@unique([requesterId, addresseeId])` prevents duplicate requests at the DB level
+- Every state change triggers a **real-time WebSocket notification** to the target user with live unread count
+
+### 💬 Direct & Public Messaging
+- **Direct messages** — delivered exclusively to the target user's active WebSocket socket
+- **Public messages** — `receiverId: null` in DB, broadcast to all connected clients
+- Message delivery blocked at the server if no accepted connection exists (checked before every `message.create`)
+- Real-time **unread message count** computed and sent with each new message delivery
+
+### ✅ Read Receipts
+- Client emits `markRead` when a conversation is opened
+- Server updates `read: true` and `readAt: new Date()` via `message.updateMany`
+- **Sender receives `messageRead` event** in real-time — enables double-tick UX
+
+### 🟢 Live Presence Tracking
+- `clients{}` object maps `userId → WebSocket` — O(1) targeted delivery
+- `onlineUsers` Set tracks who is online
+- On connect: broadcasts `userStatus: online` + sends `initialOnlineUsers[]` to the new socket
+- On disconnect: **2-second grace period** via `setTimeout` before broadcasting offline — prevents false offline on brief reconnects
+
+### ⌨️ Typing Indicators
+- `typing` and `stop_typing` events forwarded directly to target socket
+- Zero DB writes — pure in-memory event relay
+
+### 🔔 Persistent Notification Engine
+- `Notification` table with typed enum: `connection_request` | `connection_accepted` | `connection_rejected`
+- Real-time delivery via WebSocket with live `unreadCount` update
+- REST endpoints to fetch all notifications, get unread count, mark as read, and respond to requests
+- On connection response, the **original request notification is auto-marked as read**
+
+### 👤 Rich User Profiles
+- Editable fields: `name`, `username`, `description`, `location`, `profilePhoto`
+- Profile photo stored as URL string in DB
+- Username uniqueness enforced at DB + friendly error returned to client
+
+### 🤖 LangChain + Gemini AI Chatbot
+- Per-session conversation memory via **`ConversationBufferMemory`** — each `session_id` maintains its own history
+- Powered by **Google Gemini** (`ChatGoogleGenerativeAI`) through LangChain's `LLMChain`
+- Custom **PromptTemplate** defines AI persona, history placeholder, and user input
+- Node.js proxies all chatbot requests — **Gemini API key stays server-side**, never exposed to the browser
 
 ---
 
@@ -273,74 +376,100 @@ Chat-Application/
 │
 ├── backend/
 │   ├── prisma/
-│   │   └── schema.prisma         # User, Message, Connections, Notification models
-│   ├── server.js                 # Entire backend: Express + WS server (port 3000)
-│   │   ├── REST routes           # Auth, users, messages, notifications, connections
-│   │   ├── authMiddleware        # Inline JWT cookie verification
-│   │   ├── WebSocketServer       # ws event handlers
-│   │   ├── clients{}             # userId → WebSocket live map
-│   │   ├── onlineUsers (Set)     # Real-time presence tracking
-│   │   └── Helper functions      # broadcastUserStatus, sendCurrentOnlineUsers
-│   └── .env                      # JWT_SECRET, DATABASE_URL, NODE_ENV
+│   │   └── schema.prisma          # Models: User, Message, Connections, Notification
+│   │                              # Enums: NotificationType, ResponseStatus
+│   │                              # Provider: PostgreSQL
+│   │
+│   └── server.js                  # Single-file unified server
+│       ├── Express setup          # CORS, JSON, cookie-parser
+│       ├── authMiddleware         # JWT cookie → req.userId
+│       ├── REST Routes (20+)      # Auth, users, messages, notifications, connections
+│       ├── WebSocketServer (ws)   # All real-time event handlers
+│       ├── clients{}              # userId → WebSocket map
+│       ├── onlineUsers (Set)      # Presence tracking
+│       └── Helpers                # broadcastUserStatus, sendCurrentOnlineUsers
+│
+├── chatbot/
+│   └── chatbot.py                 # Flask AI microservice (port 5001)
+│       ├── Flask /chat route      # Accepts { message, session_id }
+│       ├── LangChain LLMChain     # Chains prompt + memory + LLM
+│       ├── ConversationBufferMemory  # Per-session history dict
+│       └── ChatGoogleGenerativeAI # Google Gemini integration
 │
 ├── frontend/
-│   └── frontend-project/         # React application
+│   └── frontend-project/          # React + Tailwind CSS
 │       ├── src/
-│       │   ├── components/       # ChatWindow, MessageBubble, UserList, Notifications
-│       │   ├── context/          # WebSocket context (global WS instance)
-│       │   ├── pages/            # Login, Signup, Chat, Profile
+│       │   ├── components/        # ChatWindow, MessageBubble, RoomList,
+│       │   │                      # TypingBadge, NotificationBell, UserCard
+│       │   ├── context/           # WebSocket context (global WS instance)
+│       │   ├── pages/             # Login, Signup, Chat, Profile, Connections
 │       │   └── App.js
+│       ├── tailwind.config.js
 │       └── public/
 │
-├── *.py                          # Python chatbot microservice (port 5001)
 └── README.md
+```
+
+---
+
+## 🔑 Environment Variables
+
+### Backend (`backend/.env`)
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/chatdb
+JWT_SECRET=your_jwt_secret_key
+NODE_ENV=development
+```
+
+### Python Chatbot (`chatbot/.env`)
+
+```env
+GOOGLE_API_KEY=your_google_gemini_api_key
+GOOGLE_MODEL=gemini-pro
 ```
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Node.js v16+
-- A Prisma-compatible database (PostgreSQL recommended)
-- Python 3 (for the chatbot service)
-
-### Backend Setup
+### 1. Database Setup
 
 ```bash
 cd backend
-
 npm install
 
-# Configure environment
-echo "DATABASE_URL=postgresql://user:pass@localhost:5432/chatdb
-JWT_SECRET=your_super_secret_key
-NODE_ENV=development" > .env
-
-# Run DB migrations
+# Configure .env with DATABASE_URL and JWT_SECRET
 npx prisma migrate dev --name init
-
-# Generate Prisma client
 npx prisma generate
-
-# Start server (REST + WebSocket on port 3000)
-node server.js
 ```
 
-### Frontend Setup
+### 2. Start Node.js Server
+
+```bash
+# From backend/
+node server.js
+# Runs Express REST API + WebSocket server on http://localhost:3000
+```
+
+### 3. Start Python Chatbot Service
+
+```bash
+cd chatbot
+pip install flask flask-cors langchain langchain-google-genai python-dotenv
+
+# Configure .env with GOOGLE_API_KEY and GOOGLE_MODEL
+python chatbot.py
+# Runs on http://localhost:5001
+```
+
+### 4. Start Frontend
 
 ```bash
 cd frontend/frontend-project
-
 npm install
 npm start
-```
-
-### Python Chatbot (Optional)
-
-```bash
-# From root directory
-python chatbot.py   # Starts on port 5001
+# Runs on http://localhost:5173 (Vite) or http://localhost:3001 (CRA)
 ```
 
 ---
@@ -349,48 +478,48 @@ python chatbot.py   # Starts on port 5001
 
 ### Auth
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|:----:|
-| `POST` | `/api/signup` | Register new user, sets JWT cookie | ❌ |
-| `POST` | `/api/signin` | Login, sets JWT cookie | ❌ |
-| `POST` | `/api/logout` | Clears JWT cookie | ❌ |
-| `GET` | `/api/me` | Get current user profile | ✅ |
-| `PUT` | `/user/:id` | Update profile / change password | ✅ |
-| `DELETE` | `/api/delete-user/:userId` | Delete user + all related data | ❌ |
+| Method | Endpoint | Body / Params | Auth | Description |
+|--------|----------|--------------|:----:|-------------|
+| `POST` | `/api/signup` | `{ username, password }` | ❌ | Register, sets JWT cookie |
+| `POST` | `/api/signin` | `{ username, password }` | ❌ | Login, sets JWT cookie |
+| `POST` | `/api/logout` | — | ❌ | Clears JWT cookie |
+| `GET` | `/api/me` | — | ✅ | Get own profile |
+| `PUT` | `/user/:id` | `{ name, username, description, location, profilePhoto, password, currentPassword }` | ✅ | Update profile / change password |
+| `DELETE` | `/api/delete-user/:userId` | — | ❌ | Delete user + cascade messages, connections, notifications |
 
 ### Users & Connections
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|:----:|
-| `GET` | `/api/users` | List all users (except self) | ✅ |
-| `GET` | `/user/:userid` | Get public profile by ID | ❌ |
-| `GET` | `/connected` | Get all accepted connections | ✅ |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| `GET` | `/api/users` | ✅ | All users except self |
+| `GET` | `/user/:userid` | ❌ | Public profile by ID |
+| `GET` | `/connected` | Cookie | All accepted connections (deduped) |
 
 ### Messages
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|:----:|
-| `GET` | `/api/messages/:withUserId` | Fetch DM history with a user | ✅ |
-| `GET` | `/api/public-messages` | Fetch all public messages | ✅ |
-| `GET` | `/api/chat-users` | Get recent chats with last msg + unread count | ✅ |
-| `GET` | `/unread-senders` | Count senders with unread messages | ✅ |
-| `POST` | `/messages/mark-read/:senderId` | Mark all messages from sender as read | ✅ |
-| `DELETE` | `/api/delete-chats` | Delete all messages between two users | ❌ |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| `GET` | `/api/messages/:withUserId` | ✅ | DM history with a user (ordered asc) |
+| `GET` | `/api/public-messages` | ✅ | All public messages (receiverId = null) |
+| `GET` | `/api/chat-users` | ✅ | Recent chats: user + lastMessage + unreadCount |
+| `GET` | `/unread-senders` | ✅ | Count + IDs of senders with unread messages |
+| `POST` | `/messages/mark-read/:senderId` | ✅ | Mark all messages from sender as read |
+| `DELETE` | `/api/delete-chats?userAId=&userBId=` | ❌ | Delete all messages between two users |
 
 ### Notifications
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|:----:|
-| `GET` | `/api/notifications` | Fetch all notifications | Cookie |
-| `GET` | `/api/notifications/unreadCount` | Get unread notification count | ✅ |
-| `POST` | `/api/notifications/read` | Mark a notification as read | ❌ |
-| `POST` | `/api/notifications/respond` | Accept/reject a connection request | Cookie |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| `GET` | `/api/notifications` | Cookie | All notifications (ordered desc) |
+| `GET` | `/api/notifications/unreadCount` | ✅ | Count of unread notifications |
+| `POST` | `/api/notifications/read` | ❌ | Mark single notification as read |
+| `POST` | `/api/notifications/respond` | Cookie | Set `responseStatus`: `accepted` / `rejected` |
 
-### Other
+### AI Chatbot
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|:----:|
-| `POST` | `/chatbot` | Proxy message to Python AI chatbot | ❌ |
+| Method | Endpoint | Body | Description |
+|--------|----------|------|-------------|
+| `POST` | `/chatbot` | `{ message, session_id }` | Proxy to Python Flask AI service |
 
 ---
 
@@ -398,30 +527,30 @@ python chatbot.py   # Starts on port 5001
 
 ### Client → Server
 
-| Event `type` | Key Payload Fields | Description |
-|---|---|---|
-| `auth` | `userId` | Authenticate socket immediately after connecting |
-| `message` | `content`, `receiverId` | Send a DM (`receiverId` set) or public message (null) |
-| `markRead` | `withUserId` | Mark all DMs from a user as read |
+| `type` | Key Fields | Description |
+|--------|-----------|-------------|
+| `auth` | `userId` | Authenticate socket — must be first message sent |
+| `message` | `content`, `receiverId` | DM (receiverId set) or public broadcast (receiverId omitted) |
+| `markRead` | `withUserId` | Mark all messages from this user as read |
 | `connection_request` | `targetUserId` | Send a connection request |
-| `connection-response` | `fromUserId`, `response` | Accept / reject a connection (`"accepted"` or `"rejected"`) |
-| `typing` | `to` | Notify a user you are typing |
-| `stop_typing` | `to` | Notify a user you stopped typing |
+| `connection-response` | `fromUserId`, `response` | `"accepted"` or `"rejected"` |
+| `typing` | `to` | Notify target user you are composing |
+| `stop_typing` | `to` | Notify target user you stopped composing |
 
 ### Server → Client
 
-| Event `type` | Key Payload Fields | Description |
-|---|---|---|
-| `initialOnlineUsers` | `onlineUsers[]` | Full online user list on first connect |
-| `userStatus` | `userId`, `isOnline` | Presence update broadcast |
-| `newMessage` | `from`, `content`, `timestamp`, `unreadCount` | Incoming DM notification |
-| `messageRead` | `from` | Receiver has read your messages |
-| `newNotification` | `notification{}`, `unreadCount` | New in-app notification |
+| `type` | Key Fields | Description |
+|--------|-----------|-------------|
+| `initialOnlineUsers` | `onlineUsers[]` | Snapshot of all online users on connect |
+| `userStatus` | `userId`, `isOnline` | Presence change broadcast to all |
+| `newMessage` | `from`, `content`, `timestamp`, `unreadCount` | Incoming DM with live unread count |
+| `messageRead` | `from` | Target user opened your conversation |
+| `newNotification` | `notification{}`, `unreadCount` | New notification with badge count |
 | `connection-request-received` | `fromUserId` | Incoming connection request |
-| `connection-request-sent` | `toUserId` | Confirms your request was sent |
-| `connection-response-confirmed` | `toUserId`, `response` | Confirms your accept/reject was processed |
-| `connection-established` | `withUserId` | Both users notified of successful connection |
-| `error` | `message` | Server-side error feedback |
+| `connection-request-sent` | `toUserId` | Confirms request was stored + sent |
+| `connection-response-confirmed` | `toUserId`, `response` | Confirms accept/reject processed |
+| `connection-established` | `withUserId` | Both users notified — chat is now unlocked |
+| `error` | `message` | Server-side validation or runtime error |
 
 ---
 
@@ -429,20 +558,23 @@ python chatbot.py   # Starts on port 5001
 
 | Decision | Rationale |
 |---|---|
-| **Native `ws` over Socket.io** | No abstraction overhead; fine-grained control over every event and connection lifecycle |
-| **Single unified server** | Express HTTP and WebSocket share one `http.Server` — simpler deployment, no CORS/port issues |
-| **JWT in httpOnly cookies** | Tokens cannot be accessed by JavaScript — eliminates XSS-based token theft |
-| **WS auth via message, not headers** | Browser WebSocket API does not support custom headers; auth message on open is the correct pattern |
-| **Accepted connection required to message** | Prevents spam; mirrors real-world platforms like LinkedIn |
-| **2-second offline grace period** | Handles brief network flaps/reconnects without falsely broadcasting offline status |
-| **Python chatbot as a microservice** | Keeps AI logic decoupled; can be scaled or swapped independently of the Node.js server |
-| **Prisma over raw SQL** | Type-safe queries, auto-generated client, and schema-as-code with migrations |
+| **Native `ws` over Socket.io** | Zero abstraction overhead; explicit control over every frame, event, and room |
+| **Single unified Node.js server** | Express HTTP and WebSocket share one `http.Server` — no CORS issues, simpler deployment |
+| **JWT in `httpOnly` cookies** | Tokens unreachable by JavaScript — eliminates XSS-based token theft entirely |
+| **WS auth via `auth` message event** | Browser's native `WebSocket` API doesn't support custom headers; auth-on-open is the correct pattern |
+| **Connection gate before messaging** | Verified via `connections.findFirst` on every `message` event — prevents spam at the protocol level |
+| **2-second offline grace period** | `setTimeout(2000)` before broadcasting `offline` — handles mobile/flaky reconnects gracefully |
+| **`receiverId: null` for public messages** | Single `Message` model handles both DM and broadcast — no separate table needed |
+| **Python microservice for AI** | Keeps Python's AI ecosystem (LangChain, Gemini) decoupled from Node.js; independently scalable |
+| **`ConversationBufferMemory` per session** | Each `session_id` maintains its own history dict — Gemini gets full conversation context every call |
+| **Gemini API key proxy via Node.js** | API key lives only on the server — the browser never sees it, even in network requests |
+| **Prisma over raw SQL** | Schema-as-code, type-safe queries, auto-generated client, and reproducible migrations |
 
 ---
 
 ## 🤝 Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+Pull requests are welcome. Please open an issue first to discuss major changes.
 
 ---
 
