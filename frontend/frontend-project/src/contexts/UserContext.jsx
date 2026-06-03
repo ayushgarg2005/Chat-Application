@@ -10,7 +10,7 @@ export const UserProvider = ({ children }) => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/api/me", { withCredentials: true })
+      .get("/api/me", { withCredentials: true })
       .then((res) => {
         setUser(res.data);
         setAuthenticated(true);

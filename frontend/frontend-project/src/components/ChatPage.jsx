@@ -19,7 +19,7 @@ const ChatPage = () => {
   // Fetch selected user info
   useEffect(() => {
     if (!selectedUserId) return;
-    axios.get(`http://localhost:3000/user/${selectedUserId}`, { withCredentials: true })
+    axios.get(`/user/${selectedUserId}`, { withCredentials: true })
       .then(res => setSelectedUser(res.data))
       .catch(err => console.error("Failed to fetch user:", err));
   }, [selectedUserId]);
@@ -28,12 +28,12 @@ const ChatPage = () => {
   useEffect(() => {
     if (!selectedUser) return;
 
-    axios.get(`http://localhost:3000/api/messages/${selectedUser.id}`, { withCredentials: true })
+    axios.get(`/api/messages/${selectedUser.id}`, { withCredentials: true })
       .then(res => {
         setMessages(res.data);
 
         // Mark messages as read in DB
-        axios.post(`http://localhost:3000/messages/mark-read/${selectedUser.id}`, {}, { withCredentials: true })
+        axios.post(`/messages/mark-read/${selectedUser.id}`, {}, { withCredentials: true })
           .then(() => {
             sendMessage({ type: "markRead", withUserId: selectedUser.id });
 
@@ -57,23 +57,32 @@ const ChatPage = () => {
     const handleMessage = (e) => {
       const data = JSON.parse(e.data);
 
-      if (data.type === "message") {
-        if (data.senderId === selectedUser?.id) {
-          // Message from currently open chat user
-          setMessages(prev => [...prev, data]);
-          sendMessage({ type: "markRead", withUserId: data.senderId });
+      // Handle both "message" (legacy) and "newMessage" (from backend) types
+      if (data.type === "message" || data.type === "newMessage") {
+        // Normalize the sender ID — backend sends "from" for newMessage, "senderId" for message
+        const senderId = data.senderId || data.from;
+
+        if (senderId === selectedUser?.id) {
+          // Message from currently open chat user — show it in the chat
+          setMessages(prev => [...prev, {
+            senderId: senderId,
+            receiverId: userId,
+            content: data.content,
+            createdAt: data.createdAt || data.timestamp || new Date(),
+          }]);
+          sendMessage({ type: "markRead", withUserId: senderId });
 
           // Clear unread count for this user
           setUnreadCounts(prev => {
             const newCounts = { ...prev };
-            delete newCounts[data.senderId];
+            delete newCounts[senderId];
             return newCounts;
           });
         } else {
           // Message from other users - increment unread count
           setUnreadCounts(prev => ({
             ...prev,
-            [data.senderId]: (prev[data.senderId] || 0) + 1,
+            [senderId]: (prev[senderId] || 0) + 1,
           }));
         }
       }

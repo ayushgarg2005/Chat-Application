@@ -12,7 +12,7 @@ const UserProfile = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/user/${id}`);
+        const res = await fetch(`/user/${id}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to fetch user");
         setUser(data);
@@ -39,7 +39,7 @@ const UserProfile = () => {
   };
 
   const handleSendMessage = () => {
-    window.location.href = `http://localhost:3000/chat/${id}`;
+    window.location.href = `/chat/${id}`;
   };
 
   if (loading) {

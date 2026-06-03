@@ -7,13 +7,14 @@ const useWebSocket = () => useContext(WebSocketContext);
 
 const WebSocketProvider = ({ children }) => {
   const socketRef = useRef(null);
+  const heartbeatRef = useRef(null); // For Redis presence heartbeat
   const [socketConnected, setSocketConnected] = useState(false);
   const [userId, setUserId] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState({});
 
   // Fetch userId once on mount
   useEffect(() => {
-    axios.get("http://localhost:3000/api/me", { withCredentials: true })
+    axios.get("/api/me", { withCredentials: true })
       .then((res) => {
         setUserId(res.data.id);
       })
@@ -33,12 +34,23 @@ const WebSocketProvider = ({ children }) => {
       console.log("WebSocket connected");
       ws.send(JSON.stringify({ type: "auth", userId }));
       setSocketConnected(true);
+
+      // ── HEARTBEAT: keeps Redis presence TTL alive ──
+      // Sends { type: "heartbeat" } every 20 seconds
+      // The backend refreshes the Redis key: EXPIRE user:online:{userId} 30
+      // Without this, the user would appear offline after 30s!
+      heartbeatRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "heartbeat" }));
+        }
+      }, 20000); // Every 20 seconds
     };
 
     ws.onclose = () => {
       console.log("WebSocket closed");
       setSocketConnected(false);
       setOnlineUsers({}); // Clear online users on disconnect
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
 
     ws.onerror = (err) => {
@@ -63,6 +75,7 @@ const WebSocketProvider = ({ children }) => {
     };
 
     return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       ws.close();
     };
   }, [userId]);

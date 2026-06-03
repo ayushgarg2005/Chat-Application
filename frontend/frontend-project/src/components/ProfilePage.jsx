@@ -32,7 +32,7 @@ const ProfilePage = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/me", {
+        const res = await axios.get("/api/me", {
           withCredentials: true,
         });
         setUser(res.data);
@@ -79,7 +79,7 @@ const handleSubmit = async (e) => {
     }
 
     const res = await axios.put(
-      `http://localhost:3000/user/${user.id}`,
+      `/user/${user.id}`,
       updatePayload,
       { withCredentials: true }
     );

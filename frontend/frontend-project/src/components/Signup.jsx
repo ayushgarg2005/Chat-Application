@@ -26,7 +26,7 @@ export default function Signup() {
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/api/signup",
+        "/api/signup",
         {
           username: formData.username,
           password: formData.password
@@ -44,60 +44,66 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-lg">
-        <h2 className="text-3xl font-extrabold mb-8 text-center text-gray-800">
-          Create an Account
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-100">
+      <div className="bg-white/70 backdrop-blur-xl p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 w-full max-w-md transition-all duration-300">
+        <div className="mb-10 text-center">
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight mb-2">
+            Create an Account
+          </h2>
+          <p className="text-gray-500 text-sm">Join us today. It's free and easy.</p>
+        </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={handleSubmit}>
           <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">Username</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">Username</label>
             <input
               type="text"
               name="username"
               value={formData.username}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm placeholder-gray-400"
+              placeholder="Choose a username"
               required
             />
           </div>
 
           <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">Password</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">Password</label>
             <input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm placeholder-gray-400"
+              placeholder="Create a password"
               required
             />
           </div>
 
           <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">Confirm Password</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">Confirm Password</label>
             <input
               type="password"
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm placeholder-gray-400"
+              placeholder="Confirm your password"
               required
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-xl text-lg font-semibold hover:bg-blue-700 transition"
+            className="w-full bg-gray-900 text-white py-3.5 rounded-xl text-sm font-semibold tracking-wide hover:bg-gray-800 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 mt-2"
           >
             Sign Up
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-8 text-center text-sm text-gray-500">
           Already have an account?{" "}
-          <Link to="/signin" className="text-blue-600 hover:underline font-medium">
+          <Link to="/signin" className="text-gray-900 font-semibold hover:underline">
             Sign in
           </Link>
         </p>

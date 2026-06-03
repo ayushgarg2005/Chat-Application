@@ -30,7 +30,7 @@ function ProtectedRoute({ children }) {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/api/me", { withCredentials: true })
+      .get("/api/me", { withCredentials: true })
       .then((res) => {
         setAuthenticated(true);
         setUserId(res.data.id);
@@ -122,15 +122,26 @@ function App() {
           />
         </Routes>
 
-        {/* Put Chatbot inside a Route if you want it to depend on path */}
-        <ProtectedRoute>
-          <Chatbot />
-        </ProtectedRoute>
+        {/* Chatbot rendered globally but only when authenticated */}
+        <GlobalChatbot />
       </Router>
 
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
     </>
   );
+}
+
+function GlobalChatbot() {
+  const [authenticated, setAuthenticated] = useState(false);
+  
+  useEffect(() => {
+    axios
+      .get("/api/me", { withCredentials: true })
+      .then(() => setAuthenticated(true))
+      .catch(() => setAuthenticated(false));
+  }, []);
+
+  return authenticated ? <Chatbot /> : null;
 }
 
 

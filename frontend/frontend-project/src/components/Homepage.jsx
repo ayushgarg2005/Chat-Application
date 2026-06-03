@@ -14,13 +14,13 @@ const Homepage = () => {
   const { onlineUsers, connected, socket, sendMessage } = useWebSocket();
 
   useEffect(() => {
-    axios.get("http://localhost:3000/api/me", { withCredentials: true })
+    axios.get("/api/me", { withCredentials: true })
       .then((res) => setMe(res.data))
       .catch(() => navigate("/signup"));
   }, [navigate]);
 
   useEffect(() => {
-    axios.get("http://localhost:3000/api/users", { withCredentials: true })
+    axios.get("/api/users", { withCredentials: true })
       .then((res) => setUsers(res.data))
       .catch((err) => console.error("Failed to fetch users:", err));
   }, []);

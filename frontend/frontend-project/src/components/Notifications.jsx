@@ -34,7 +34,7 @@ const Notifications = () => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/api/me", { withCredentials: true })
+      .get("/api/me", { withCredentials: true })
       .then((res) => setMe(res.data))
       .catch((err) => console.error("User not authenticated", err));
   }, []);
@@ -48,7 +48,7 @@ const Notifications = () => {
     setLoading(true);  // Start loading
     if (!me) return;
     axios
-      .get("http://localhost:3000/api/notifications", {
+      .get("/api/notifications", {
         withCredentials: true,
       })
       .then((res) => {
@@ -79,7 +79,7 @@ const Notifications = () => {
       );
       toMark.forEach((n) => {
         axios
-          .post("http://localhost:3000/api/notifications/read", {
+          .post("/api/notifications/read", {
             notificationId: n.id,
           })
           .catch((err) => console.error("Failed to mark read", err));
@@ -129,7 +129,7 @@ const Notifications = () => {
         );
 
         await axios.post(
-          "http://localhost:3000/api/notifications/respond",
+          "/api/notifications/respond",
           {
             notificationId: notification.id,
             responseStatus: response,

@@ -15,7 +15,7 @@ const Chatbot = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/me", {
+        const res = await axios.get("/api/me", {
           withCredentials: true,
         });
         setUser(res.data);

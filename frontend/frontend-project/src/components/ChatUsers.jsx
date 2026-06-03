@@ -20,7 +20,7 @@ const ChatUsers = () => {
   useEffect(() => {
     const fetchChatUsers = async () => {
       try {
-        const res = await axios.get('http://localhost:3000/api/chat-users', {
+        const res = await axios.get('/api/chat-users', {
           withCredentials: true,
         });
         setChatUsers(res.data);
