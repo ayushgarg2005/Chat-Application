@@ -3,6 +3,7 @@ import prisma from "../../config/db.js";
 import { redisPub } from "../../config/redis.js";
 import { checkMessageRateLimit } from "../../middleware/rateLimiter.js";
 import { cacheInvalidate } from "../../utils/cache.js";
+import { producer } from "../../config/kafka.js";
 
 // ─────────────────────────────────────────────────────────────
 // MESSAGE HANDLER — Now with Redis Pub/Sub + Rate Limiting
@@ -49,84 +50,33 @@ export async function handleMessage(ws, data, userId, clients) {
       return;
     }
 
-    // ── CONNECTION CHECK ──
-    const connection = await prisma.connections.findFirst({
-      where: {
-        OR: [
-          { requesterId: userId, addresseeId: data.receiverId, status: "accepted" },
-          { requesterId: data.receiverId, addresseeId: userId, status: "accepted" }
-        ]
-      }
-    });
+    // ── PUBLISH TO KAFKA ──
+    // We send the message straight to Kafka. A background worker will consume it, 
+    // verify the connection, save it, and deliver it via Redis Pub/Sub.
+    const messageEvent = {
+      content: data.content,
+      senderId: userId,
+      receiverId: data.receiverId || null,
+      createdAt: new Date().toISOString(),
+    };
 
-    if (!connection) {
-      console.log("User is not connected to the recipient");
-      ws.send(JSON.stringify({
-        type: "error",
-        message: "You can only message users with whom you have an accepted connection."
-      }));
-      return;
-    }
-
-    // ── STORE MESSAGE IN DB ──
-    const msg = await prisma.message.create({
-      data: {
-        content: data.content,
-        senderId: userId,
-        receiverId: data.receiverId || null,
-      },
-      include: { sender: true, receiver: true },
-    });
-
-    // ── INVALIDATE CHAT-LIST CACHE ──
-    // Both sender's and receiver's chat-list cache are now stale
-    await cacheInvalidate(`cache:chat-users:${userId}`);
-    await cacheInvalidate(`cache:chat-users:${data.receiverId}`);
-
-    // ── DELIVER VIA REDIS PUB/SUB ──
-    // Instead of checking local clients[] only, we publish to Redis.
-    // The server where the receiver is connected will pick it up.
-    if (msg.receiverId) {
-      const unreadCount = await prisma.message.count({
-        where: {
-          receiverId: msg.receiverId,
-          senderId: msg.senderId,
-          read: false,
+    // We use receiverId as the partition key to ensure all messages to the same user
+    // are processed in order by the same Kafka partition/worker.
+    await producer.send({
+      topic: "chat-messages",
+      messages: [
+        {
+          key: String(data.receiverId || "public"),
+          value: JSON.stringify(messageEvent),
         },
-      });
+      ],
+    });
 
-      const deliveryPayload = JSON.stringify({
-        type: "newMessage",
-        from: msg.senderId,
-        content: msg.content,
-        timestamp: msg.createdAt,
-        unreadCount,
-      });
-
-      // Try local delivery first (same server = faster)
-      const receiverSocket = clients[msg.receiverId];
-      if (receiverSocket && receiverSocket.readyState === WebSocket.OPEN) {
-        receiverSocket.send(deliveryPayload);
-        console.log(`📨 Direct delivery to user ${msg.receiverId} (same server)`);
-      } else {
-        // Receiver is on another server — publish to Redis
-        await redisPub.publish(`chat:user:${msg.receiverId}`, deliveryPayload);
-        console.log(`📨 Redis Pub/Sub delivery for user ${msg.receiverId} (cross-server)`);
-      }
-    }
-
-    // Broadcast public messages
-    if (!msg.receiverId) {
-      const enrichedMsg = { ...msg, type: "message" };
-      Object.entries(clients).forEach(([id, client]) => {
-        if (id !== String(userId) && client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(enrichedMsg));
-        }
-      });
-    }
+    // The sender's UI updates optimistically, so we don't need to ACK back.
+    console.log(`🚀 Message queued in Kafka from ${userId} to ${data.receiverId}`);
 
   } catch (err) {
-    console.error("Error saving or sending message:", err);
+    console.error("Error queueing message to Kafka:", err);
     ws.send(JSON.stringify({
       type: "error",
       message: "Something went wrong while sending the message."

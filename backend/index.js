@@ -17,6 +17,10 @@ import chatbotRoutes from "./src/routes/chatbot.routes.js";
 // Import WebSocket setup
 import { setupWebSocket } from "./src/websocket/index.js";
 
+// Import Kafka and Workers
+import { connectKafka } from "./src/config/kafka.js";
+import { startMessageWorker } from "./src/workers/message.worker.js";
+
 // Initialize Express app
 const app = express();
 
@@ -36,9 +40,15 @@ app.use(notificationRoutes);
 app.use(connectionRoutes);
 app.use(chatbotRoutes);
 
-// Start HTTP server
-const server = app.listen(3000, () => {
+// Start HTTP server and Infrastructure
+const server = app.listen(3000, async () => {
   console.log("HTTP server running on http://localhost:3000");
+
+  // Start Kafka infrastructure
+  await connectKafka();
+  
+  // Start the background worker process
+  startMessageWorker();
 });
 
 // Attach WebSocket server
