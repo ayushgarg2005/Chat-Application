@@ -36,6 +36,31 @@ export async function handleMarkRead(ws, data, userId, clients) {
 
 export async function handleMessage(ws, data, userId, clients) {
   try {
+    // ── INPUT VALIDATION ──
+    if (!data.content || typeof data.content !== "string") {
+      ws.send(JSON.stringify({ type: "error", message: "Message content must be a non-empty string." }));
+      return;
+    }
+
+    const content = data.content.trim();
+    if (content.length === 0) {
+      ws.send(JSON.stringify({ type: "error", message: "Message cannot be empty." }));
+      return;
+    }
+
+    if (content.length > 10000) {
+      ws.send(JSON.stringify({ type: "error", message: "Message is too long (max 10,000 characters)." }));
+      return;
+    }
+
+    if (data.receiverId !== undefined && data.receiverId !== null) {
+      const parsedReceiverId = parseInt(data.receiverId, 10);
+      if (isNaN(parsedReceiverId) || parsedReceiverId <= 0) {
+        ws.send(JSON.stringify({ type: "error", message: "Invalid receiverId." }));
+        return;
+      }
+    }
+
     // ── RATE LIMITING (Redis) ──
     // Check if the user has exceeded 30 messages per minute
     // Redis command: INCR ratelimit:msg:{userId}:{minute}
@@ -54,9 +79,9 @@ export async function handleMessage(ws, data, userId, clients) {
     // We send the message straight to Kafka. A background worker will consume it, 
     // verify the connection, save it, and deliver it via Redis Pub/Sub.
     const messageEvent = {
-      content: data.content,
+      content: content,
       senderId: userId,
-      receiverId: data.receiverId || null,
+      receiverId: data.receiverId ? parseInt(data.receiverId, 10) : null,
       createdAt: new Date().toISOString(),
     };
 

@@ -1,18 +1,13 @@
 import { Router } from "express";
-import jwt from "jsonwebtoken";
 import prisma from "../config/db.js";
+import authMiddleware from "../middleware/auth.js";
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET;
 
 // GET /connected
-router.get("/connected", async (req, res) => {
+router.get("/connected", authMiddleware, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) return res.status(401).json({ error: "No token provided" });
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = decoded.userId;
+    const userId = req.userId;
 
     const sentConnections = await prisma.connections.findMany({
       where: {

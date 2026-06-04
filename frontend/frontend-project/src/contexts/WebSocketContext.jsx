@@ -10,29 +10,31 @@ const WebSocketProvider = ({ children }) => {
   const heartbeatRef = useRef(null); // For Redis presence heartbeat
   const [socketConnected, setSocketConnected] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [wsToken, setWsToken] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState({});
 
-  // Fetch userId once on mount
+  // Fetch userId and wsToken once on mount
   useEffect(() => {
     axios.get("/api/me", { withCredentials: true })
       .then((res) => {
         setUserId(res.data.id);
+        setWsToken(res.data.wsToken);
       })
       .catch((err) => {
         console.error("Failed to fetch user for WebSocket auth", err);
       });
   }, []);
 
-  // Setup WebSocket once userId is available
+  // Setup WebSocket once userId and wsToken are available
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !wsToken) return;
 
     const ws = new WebSocket("ws://localhost:3000");
     socketRef.current = ws;
 
     ws.onopen = () => {
       console.log("WebSocket connected");
-      ws.send(JSON.stringify({ type: "auth", userId }));
+      ws.send(JSON.stringify({ type: "auth", token: wsToken }));
       setSocketConnected(true);
 
       // ── HEARTBEAT: keeps Redis presence TTL alive ──
@@ -78,7 +80,7 @@ const WebSocketProvider = ({ children }) => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       ws.close();
     };
-  }, [userId]);
+  }, [userId, wsToken]);
 
   const sendMessage = (message) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {

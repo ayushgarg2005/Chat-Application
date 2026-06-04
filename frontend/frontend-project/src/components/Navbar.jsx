@@ -41,11 +41,6 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    if (!me || !socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(JSON.stringify({ type: "auth", userId: me.id }));
-  }, [me, socket]);
-
-  useEffect(() => {
     async function fetchUnreadData() {
       try {
         // Unread notifications

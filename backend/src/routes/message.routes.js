@@ -44,14 +44,25 @@ router.get("/api/public-messages", authMiddleware, async (req, res) => {
 });
 
 // DELETE /api/delete-chats
-router.delete('/api/delete-chats', async (req, res) => {
+router.delete('/api/delete-chats', authMiddleware, async (req, res) => {
   const { userAId, userBId } = req.query;
+  const parsedA = Number(userAId);
+  const parsedB = Number(userBId);
+
+  if (isNaN(parsedA) || isNaN(parsedB)) {
+    return res.status(400).json({ error: 'Invalid user IDs.' });
+  }
+
+  // Ensure the authenticated user is one of the two parties
+  if (req.userId !== parsedA && req.userId !== parsedB) {
+    return res.status(403).json({ error: 'You can only delete your own chats.' });
+  }
 
   const deleted = await prisma.message.deleteMany({
     where: {
       OR: [
-        { senderId: Number(userAId), receiverId: Number(userBId) },
-        { senderId: Number(userBId), receiverId: Number(userAId) },
+        { senderId: parsedA, receiverId: parsedB },
+        { senderId: parsedB, receiverId: parsedA },
       ],
     },
   });

@@ -7,13 +7,9 @@ import authMiddleware from "../middleware/auth.js";
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// DELETE /api/delete-user/:userId
-router.delete("/api/delete-user/:userId", async (req, res) => {
-  const userId = parseInt(req.params.userId, 10);
-
-  if (isNaN(userId)) {
-    return res.status(400).json({ error: "Invalid userId." });
-  }
+// DELETE /api/delete-user
+router.delete("/api/delete-user", authMiddleware, async (req, res) => {
+  const userId = req.userId;
 
   try {
     // Delete all messages sent or received by the user
@@ -36,10 +32,17 @@ router.delete("/api/delete-user/:userId", async (req, res) => {
       }
     });
 
-    // Delete all notifications for the user
+    // Delete all notifications for the user (as recipient)
     await prisma.notification.deleteMany({
       where: {
         userId: userId
+      }
+    });
+
+    // Delete all notifications sent by the user (as sender) to prevent FK violations
+    await prisma.notification.deleteMany({
+      where: {
+        fromUserId: userId
       }
     });
 
@@ -171,7 +174,13 @@ router.get("/api/me", authMiddleware, async (req, res) => {
       createdAt: true,
     },
   });
-  res.json(user);
+
+  // Generate a short-lived token for WebSocket authentication
+  // This allows the frontend to authenticate over WebSocket without exposing
+  // the main httpOnly session cookie to JavaScript.
+  const wsToken = jwt.sign({ userId: req.userId }, JWT_SECRET, { expiresIn: "30s" });
+
+  res.json({ ...user, wsToken });
 });
 
 export default router;

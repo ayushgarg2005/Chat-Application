@@ -1,10 +1,13 @@
 import { WebSocketServer, WebSocket } from "ws";
+import jwt from "jsonwebtoken";
 import { broadcastUserStatus } from "../utils/broadcast.js";
 import { handleMessage, handleMarkRead } from "./handlers/message.handler.js";
 import { handleConnectionRequest, handleConnectionResponse } from "./handlers/connection.handler.js";
 import { handleTyping } from "./handlers/typing.handler.js";
 import { setUserOnline, setUserOffline, refreshPresence, getAllOnlineUsers } from "../utils/presence.js";
 import { redisSub } from "../config/redis.js";
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // ─────────────────────────────────────────────────────────────
 // REDIS PUB/SUB FOR CROSS-SERVER WEBSOCKET
@@ -27,7 +30,7 @@ import { redisSub } from "../config/redis.js";
 const clients = {}; // userId -> WebSocket (local to this server instance)
 
 export function setupWebSocket(server) {
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({ server, maxPayload: 1 * 1024 * 1024 /* 1 MB */ });
 
   // ── Redis Subscriber: Listen for messages from other servers ──
   redisSub.on("message", (channel, message) => {
@@ -53,16 +56,26 @@ export function setupWebSocket(server) {
         return;
       }
 
-      // ── Authentication ──
+      // ── Authentication (JWT-verified) ──
       if (data.type === "auth") {
-        const authUserId = data.userId;
-        if (!authUserId) {
-          console.log("Auth failed: no userId");
+        const token = data.token;
+        if (!token) {
+          console.log("Auth failed: no token provided");
+          ws.send(JSON.stringify({ type: "error", message: "Authentication token required." }));
           ws.close();
           return;
         }
 
-        userId = authUserId;
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          userId = decoded.userId;
+        } catch (err) {
+          console.log("Auth failed: invalid token");
+          ws.send(JSON.stringify({ type: "error", message: "Invalid or expired token." }));
+          ws.close();
+          return;
+        }
+
         clients[userId] = ws;
 
         // Mark online in REDIS (not in-memory Set)

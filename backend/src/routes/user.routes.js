@@ -19,6 +19,13 @@ router.get("/api/users", authMiddleware, async (req, res) => {
 
 // PUT /user/:id — update user profile
 router.put("/user/:id", authMiddleware, async (req, res) => {
+  const targetId = parseInt(req.params.id, 10);
+
+  // Ownership check: users can only update their own profile
+  if (isNaN(targetId) || targetId !== req.userId) {
+    return res.status(403).json({ message: "You can only update your own profile." });
+  }
+
   const {
     name,
     description,
@@ -50,9 +57,7 @@ router.put("/user/:id", authMiddleware, async (req, res) => {
       if (!currentPassword) {
         return res.status(400).json({ message: "Current password is required to update password." });
       }
-      console.log("currentPassword", currentPassword);
-      console.log(typeof currentPassword);
-      console.log(user.password);
+
       const isMatch = await bcrypt.compare(currentPassword, user.password);
       if (!isMatch) {
         return res.status(401).json({ message: "Current password is incorrect." });
@@ -65,6 +70,16 @@ router.put("/user/:id", authMiddleware, async (req, res) => {
     const updated = await prisma.user.update({
       where: { id: req.userId },
       data: updateData,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        name: true,
+        description: true,
+        location: true,
+        profilePhoto: true,
+        createdAt: true,
+      },
     });
 
     res.json(updated);

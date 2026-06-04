@@ -39,11 +39,6 @@ const Notifications = () => {
       .catch((err) => console.error("User not authenticated", err));
   }, []);
 
-  useEffect(() => {
-    if (!me || !socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(JSON.stringify({ type: "auth", userId: me.id }));
-  }, [me, socket]);
-
   const fetchNotifications = useCallback(() => {
     setLoading(true);  // Start loading
     if (!me) return;
