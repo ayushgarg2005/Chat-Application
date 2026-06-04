@@ -52,7 +52,7 @@ export default function Navbar() {
 
         // Unread messages
         const msgRes = await axios.get(
-          "/unread-senders",
+          "/api/unread-senders",
           { withCredentials: true }
         );
         const senders = msgRes.data.senders || [];

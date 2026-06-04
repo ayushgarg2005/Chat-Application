@@ -14,22 +14,6 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
-      '/connected': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/unread-senders': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/messages': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/chatbot': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
     },
   },
 })

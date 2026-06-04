@@ -4,8 +4,8 @@ import authMiddleware from "../middleware/auth.js";
 
 const router = Router();
 
-// GET /connected
-router.get("/connected", authMiddleware, async (req, res) => {
+// GET /api/connected
+router.get("/api/connected", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
 

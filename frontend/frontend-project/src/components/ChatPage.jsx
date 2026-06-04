@@ -33,7 +33,7 @@ const ChatPage = () => {
         setMessages(res.data);
 
         // Mark messages as read in DB
-        axios.post(`/messages/mark-read/${selectedUser.id}`, {}, { withCredentials: true })
+        axios.post(`/api/messages/mark-read/${selectedUser.id}`, {}, { withCredentials: true })
           .then(() => {
             sendMessage({ type: "markRead", withUserId: selectedUser.id });
 

@@ -20,7 +20,7 @@ const ConnectedUsers = () => {
   useEffect(() => {
     const fetchConnectedUsers = async () => {
       try {
-        const res = await axios.get("/connected", {
+        const res = await axios.get("/api/connected", {
           withCredentials: true,
         });
         setConnectedUsers(res.data.connectedUsers || []);

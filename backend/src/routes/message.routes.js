@@ -70,8 +70,8 @@ router.delete('/api/delete-chats', authMiddleware, async (req, res) => {
   res.json({ message: 'Chats deleted', count: deleted.count });
 });
 
-// GET /unread-senders
-router.get('/unread-senders', authMiddleware, async (req, res) => {
+// GET /api/unread-senders
+router.get('/api/unread-senders', authMiddleware, async (req, res) => {
   const userId = req.userId;
 
   const unreadMessages = await prisma.message.findMany({
@@ -90,8 +90,8 @@ router.get('/unread-senders', authMiddleware, async (req, res) => {
   res.json({ count: uniqueSenderIds.length, senders: uniqueSenderIds });
 });
 
-// POST /messages/mark-read/:senderId
-router.post('/messages/mark-read/:senderId', authMiddleware, async (req, res) => {
+// POST /api/messages/mark-read/:senderId
+router.post('/api/messages/mark-read/:senderId', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const senderId = parseInt(req.params.senderId, 10);
 
