@@ -1,10 +1,11 @@
 import { Router } from "express";
 import axios from "axios";
+import authMiddleware from "../middleware/auth.js";
 
 const router = Router();
 
-// POST /chatbot
-router.post("/chatbot", async (req, res) => {
+// POST /api/chatbot
+router.post("/api/chatbot", authMiddleware, async (req, res) => {
   const { message } = req.body;
 
   if (!message) {
@@ -14,6 +15,7 @@ router.post("/chatbot", async (req, res) => {
   try {
     const response = await axios.post("http://localhost:5001/chat", {
       message,
+      session_id: `user-${req.userId}`,
     });
 
     res.json({ response: response.data.response });

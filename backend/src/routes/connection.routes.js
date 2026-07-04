@@ -17,7 +17,14 @@ router.get("/api/connected", authMiddleware, async (req, res) => {
       select: {
         createdAt: true,
         addressee: {
-          select: { id: true, username: true },
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            description: true,
+            profilePhoto: true,
+            location: true,
+          },
         },
       },
     });
@@ -30,7 +37,14 @@ router.get("/api/connected", authMiddleware, async (req, res) => {
       select: {
         createdAt: true,
         requester: {
-          select: { id: true, username: true },
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            description: true,
+            profilePhoto: true,
+            location: true,
+          },
         },
       },
     });

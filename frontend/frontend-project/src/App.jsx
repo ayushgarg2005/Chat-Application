@@ -1,4 +1,3 @@
-// npx tailwindcss -i ./src/components/input.css -o ./src/components/output.css --watch
 import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,

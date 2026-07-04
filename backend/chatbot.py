@@ -43,10 +43,10 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 try:
     from langchain_community.chat_message_histories import RedisChatMessageHistory
     USE_REDIS_MEMORY = True
-    print(f"✅ Redis memory enabled (URL: {REDIS_URL})")
+    print(f"[OK] Redis memory enabled (URL: {REDIS_URL})")
 except ImportError:
     USE_REDIS_MEMORY = False
-    print("⚠️ langchain-community not installed — falling back to in-memory sessions")
+    print("[WARN] langchain-community not installed -- falling back to in-memory sessions")
     print("   Install with: pip install langchain-community redis")
 
 llm = ChatGoogleGenerativeAI(
