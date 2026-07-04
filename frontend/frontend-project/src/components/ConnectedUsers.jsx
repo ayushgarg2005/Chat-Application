@@ -1,18 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Navbar from "./Navbar";
-import Avatar from "./Avatar";
 import { useNavigate } from "react-router-dom";
-import { useWebSocket } from "../contexts/WebSocketContext";
 import {
   Search,
-  UserCheck,
-  MessageCircle,
-  ArrowUpDown,
-  MapPin,
-  Calendar,
+  User,
+  MessageCircleMore,
+  SortAsc,
+  SortDesc,
 } from "lucide-react";
-
 const ConnectedUsers = () => {
   const [connectedUsers, setConnectedUsers] = useState([]);
   const [search, setSearch] = useState("");
@@ -20,7 +16,6 @@ const ConnectedUsers = () => {
   const [error, setError] = useState("");
   const [sortOption, setSortOption] = useState("recent");
   const navigate = useNavigate();
-  const { onlineUsers } = useWebSocket();
 
   useEffect(() => {
     const fetchConnectedUsers = async () => {
@@ -30,7 +25,7 @@ const ConnectedUsers = () => {
         });
         setConnectedUsers(res.data.connectedUsers || []);
       } catch (err) {
-        setError("Failed to load connected friends.");
+        setError("Failed to fetch connected users");
         console.error(err);
       } finally {
         setLoading(false);
@@ -41,141 +36,165 @@ const ConnectedUsers = () => {
   }, []);
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return "";
     const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return (
+      date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }) +
+      " • " +
+      date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+    );
   };
 
   const filteredUsers = [...connectedUsers]
     .filter((user) =>
-      (user.name || user.username || "").toLowerCase().includes(search.toLowerCase()) ||
-      (user.location || "").toLowerCase().includes(search.toLowerCase())
+      (user.username || "").toLowerCase().includes(search.toLowerCase())
     )
     .sort((a, b) => {
       if (sortOption === "username") {
-        return (a.name || a.username || "").localeCompare(b.name || b.username || "");
+        return (a.username || "").localeCompare(b.username || "");
       } else {
-        return new Date(b.connectedAt || 0) - new Date(a.connectedAt || 0);
+        return new Date(b.connectedAt) - new Date(a.connectedAt);
       }
     });
 
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-32">
+        <svg
+          className="animate-spin h-8 w-8 text-blue-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="p-4 text-center text-red-600 font-semibold">{error}</div>
+    );
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <>
       <Navbar />
-      
-      <main className="max-w-4xl w-full mx-auto px-4 py-10 flex-1">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-3xl p-8 text-white shadow-xl mb-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 backdrop-blur-md border border-white/20 mb-3 tracking-wide uppercase text-blue-100">
-                <UserCheck className="w-3.5 h-3.5 text-emerald-300" /> My Network
-              </span>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-                Connected Friends
-              </h1>
-              <p className="text-blue-100 text-sm mt-1">
-                You have {connectedUsers.length} connection{connectedUsers.length !== 1 ? "s" : ""} in your network.
-              </p>
-            </div>
-          </div>
+      <main className="max-w-3xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg">
+        <h1 className="text-3xl font-extrabold mb-6 text-gray-900 flex items-center gap-2">
+          <User className="w-7 h-7 text-blue-600" />
+          Connected Users
+        </h1>
+
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
+          <input
+            type="search"
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          />
         </div>
 
-        {/* Controls Bar */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3.5 top-3 text-slate-400 w-4 h-4" />
-            <input
-              type="search"
-              placeholder="Search friends by name or location..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
-              <ArrowUpDown className="w-3.5 h-3.5" /> Sort:
-            </span>
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            >
-              <option value="recent">Recently Connected</option>
-              <option value="username">Name (A–Z)</option>
-            </select>
-          </div>
+        <div className="mb-6">
+          <label
+            htmlFor="sort"
+            className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
+          >
+            {sortOption === "recent" ? (
+              <SortDesc className="w-4 h-4 text-gray-500" />
+            ) : (
+              <SortAsc className="w-4 h-4 text-gray-500" />
+            )}
+            Sort by:
+          </label>
+          <select
+            id="sort"
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            
+            <option value="recent">Recently Connected</option>
+            <option value="username">Username (A–Z)</option>
+          </select>
         </div>
 
-        {/* Content */}
-        {loading ? (
-          <div className="flex flex-col justify-center items-center h-64 bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-sm font-medium text-slate-500">Loading your network...</p>
-          </div>
-        ) : error ? (
-          <div className="p-6 bg-rose-50 border border-rose-200 rounded-2xl text-center text-rose-600 font-semibold shadow-sm">
-            {error}
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto my-6 shadow-sm">
-            <UserCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-700 mb-1">No friends found</h3>
-            <p className="text-sm text-slate-500">
-              {search ? `No one matches "${search}".` : "You haven't connected with anyone yet. Explore the Home page to meet people!"}
-            </p>
-          </div>
+        {filteredUsers.length === 0 ? (
+          <p className="text-center text-gray-500 italic">
+            No connected users found.
+          </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ul className="space-y-5">
             {filteredUsers.map((user) => (
-              <div
+              <li
                 key={user.id}
-                className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-blue-500/30 transition-all duration-200 flex items-center justify-between gap-4 group"
+                className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:shadow-md transition"
               >
-                <div className="flex items-center gap-4 min-w-0">
-                  <Avatar user={user} isOnline={!!onlineUsers[user.id]} size="md" className="shrink-0" />
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-base text-slate-800 truncate group-hover:text-blue-600 transition-colors">
-                      {user.name || user.username}
-                    </h3>
-                    <p className="text-xs font-medium text-slate-400 truncate mb-1">@{user.username}</p>
-                    
-                    {user.location && (
-                      <p className="text-xs text-slate-500 flex items-center gap-1 truncate mb-1">
-                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                        <span className="truncate">{user.location}</span>
-                      </p>
-                    )}
+                <div className="flex items-center space-x-4">
+                  {user.image ? (
+                    <img
+                      src={user.image}
+                      alt={user.username}
+                      className="w-14 h-14 rounded-full object-cover shadow-sm"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xl shadow-sm">
+                      {user.username?.[0]?.toUpperCase() || "?"}
+                    </div>
+                  )}
 
-                    {user.connectedAt && (
-                      <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-slate-400" />
-                        Friends since {formatDate(user.connectedAt)}
-                      </p>
-                    )}
+                  <div>
+                    <p className="font-semibold text-lg text-gray-900">
+                      {user.username}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {user.description || "No description available"}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Connected on {formatDate(user.connectedAt)}
+                    </p>
                   </div>
                 </div>
 
+                {/* <button
+                  onClick={() => alert(`Start chatting with ${user.username}`)}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg shadow-md transition"
+                  aria-label={`Start chat with ${user.username}`}
+                >
+                  <MessageCircleMore className="w-4 h-4" />
+                  Message
+                </button> */}
                 <button
                   onClick={() => navigate(`/chat/${user.id}`)}
-                  className="shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl shadow-sm hover:shadow-md hover:shadow-blue-500/20 active:scale-95 transition-all"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg shadow-md transition"
+                  aria-label={`Start chat with ${user.username}`}
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircleMore className="w-4 h-4" />
                   Message
                 </button>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </main>
-    </div>
+    </>
   );
 };
 

@@ -1,71 +1,52 @@
 import React from "react";
 
 const bgColors = [
-  "from-rose-500 to-red-600",
-  "from-emerald-500 to-green-600",
-  "from-amber-500 to-yellow-600",
-  "from-violet-500 to-purple-600",
-  "from-pink-500 to-rose-600",
-  "from-blue-500 to-indigo-600",
-  "from-teal-500 to-cyan-600",
-  "from-orange-500 to-amber-600",
+  "bg-red-500",
+  "bg-green-500",
+  "bg-yellow-500",
+  "bg-purple-500",
+  "bg-pink-500",
+  "bg-indigo-500",
+  "bg-teal-500",
+  "bg-orange-500",
 ];
 
 const getInitials = (name) => {
-  if (!name) return "?";
+  if (!name) return "NA";
   const parts = name.trim().split(" ");
   const initials = parts.map((p) => p[0]).join("").slice(0, 2).toUpperCase();
-  return initials || "?";
+  return initials || "NA";
 };
 
-const pickGradient = (username = "") => {
-  if (!username) return "from-slate-400 to-slate-500";
+const pickColor = (username) => {
+  if (!username) return "bg-gray-400";
   const index = username.charCodeAt(0) % bgColors.length;
   return bgColors[index];
 };
 
-const Avatar = ({ user = {}, isOnline, size = "md", className = "" }) => {
-  const photoUrl = user.profilePhoto || user.imageUrl || user.image;
-
-  const sizeClasses = {
-    sm: "w-10 h-10 text-sm",
-    md: "w-14 h-14 text-lg",
-    lg: "w-20 h-20 text-2xl",
-    xl: "w-28 h-28 text-3xl",
-  }[size] || "w-14 h-14 text-lg";
-
-  return (
-    <div className={`relative inline-block ${className}`}>
-      {photoUrl && photoUrl.trim() !== "" ? (
-        <img
-          src={photoUrl}
-          alt={user.username || "Avatar"}
-          className={`${sizeClasses} object-cover rounded-full border-2 border-white shadow-md ring-2 ring-slate-100 transition-transform duration-300`}
-          onError={(e) => {
-            e.target.style.display = "none";
-            e.target.nextSibling.style.display = "flex";
-          }}
-        />
-      ) : null}
+const Avatar = ({ user, isOnline }) => (
+  <div className="relative w-24 h-24 mb-4">
+    {user.imageUrl ? (
+      <img
+        src={user.imageUrl}
+        alt="User Avatar"
+        className="w-full h-full object-cover rounded-full border-4 border-white shadow-md"
+      />
+    ) : (
       <div
-        className={`${sizeClasses} ${photoUrl && photoUrl.trim() !== "" ? "hidden" : "flex"} rounded-full items-center justify-center text-white font-bold bg-gradient-to-br ${pickGradient(
+        className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold text-xl border-4 border-white shadow-md ${pickColor(
           user.username
-        )} border-2 border-white shadow-md ring-2 ring-slate-100`}
+        )}`}
       >
-        {getInitials(user.name || user.username)}
+        {getInitials(user.username)}
       </div>
-      {isOnline !== undefined && (
-        <span
-          className={`absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm ${
-            isOnline
-              ? "bg-emerald-500 ring-2 ring-emerald-500/30 animate-pulse"
-              : "bg-slate-400"
-          }`}
-          title={isOnline ? "Online" : "Offline"}
-        ></span>
-      )}
-    </div>
-  );
-};
+    )}
+    <span
+      className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white ${
+        isOnline ? "bg-green-500" : "bg-red-400"
+      }`}
+    ></span>
+  </div>
+);
 
 export default Avatar;

@@ -1,29 +1,31 @@
 import React from "react";
-import { UserPlus, Check } from "lucide-react";
 
-const FriendRequestButton = ({ onClick, sent, small = false }) => {
+const FriendRequestButton = ({ onClick, sent }) => {
   return (
     <button
       onClick={onClick}
       disabled={sent}
-      className={`w-full rounded-xl font-semibold flex items-center justify-center transition-all duration-200 shadow-sm ${
-        small ? "py-2 px-3 text-xs" : "py-2.5 px-4 text-sm"
-      } ${
+      className={`w-full py-2 rounded-lg text-sm font-semibold flex items-center justify-center transition duration-200 ${
         sent
-          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-not-allowed shadow-none"
-          : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-md hover:shadow-blue-500/20 active:scale-95"
+          ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-400"
+          : "bg-blue-600 hover:bg-blue-700 text-white"
       }`}
     >
       {sent ? (
         <>
-          <Check className={`${small ? "w-3.5 h-3.5 mr-1" : "w-4 h-4 mr-1.5"} text-emerald-600`} />
+          <svg
+            className="w-4 h-4 mr-2 text-green-600 animate-pulse"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
           Request Sent
         </>
       ) : (
-        <>
-          <UserPlus className={`${small ? "w-3.5 h-3.5 mr-1" : "w-4 h-4 mr-1.5"}`} />
-          Connect
-        </>
+        "Send Request"
       )}
     </button>
   );

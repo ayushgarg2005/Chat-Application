@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import UserCard from "./UserCard";
-import { Sparkles, Users, Search } from "lucide-react";
 
 const Homepage = () => {
   const navigate = useNavigate();
@@ -12,7 +11,6 @@ const Homepage = () => {
   const [me, setMe] = useState(null);
   const [sentRequests, setSentRequests] = useState({});
   const [sentRequestsLoaded, setSentRequestsLoaded] = useState(false);
-  const [searchFilter, setSearchFilter] = useState("");
   const { onlineUsers, connected, socket, sendMessage } = useWebSocket();
 
   useEffect(() => {
@@ -50,83 +48,47 @@ const Homepage = () => {
     }
   };
 
-  const filteredUsers = users.filter((u) => 
-    (u.name || "").toLowerCase().includes(searchFilter.toLowerCase()) ||
-    (u.username || "").toLowerCase().includes(searchFilter.toLowerCase()) ||
-    (u.location || "").toLowerCase().includes(searchFilter.toLowerCase())
-  );
-
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <>
       <Navbar />
-      
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white py-16 px-4 overflow-hidden shadow-md">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)] pointer-events-none"></div>
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
-          <div className="max-w-xl text-center md:text-left">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 backdrop-blur-md border border-white/20 mb-4 tracking-wide uppercase text-blue-100">
-              <Sparkles className="w-3.5 h-3.5 text-yellow-300" /> Discover & Connect
-            </span>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-4">
-              Expand Your Social <span className="text-blue-200">Horizon</span>
-            </h1>
-            <p className="text-blue-100 text-sm md:text-base leading-relaxed mb-6">
-              Connect with fascinating people, share ideas in real-time, and build lasting friendships across the globe.
-            </p>
-            <div className="relative max-w-md mx-auto md:mx-0">
-              <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search by name, username, or location..."
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-white/95 text-slate-800 rounded-xl placeholder-slate-400 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white shadow-lg transition-all"
-              />
-            </div>
-          </div>
-          <div className="hidden md:flex flex-col items-center justify-center p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl w-64 text-center">
-            <Users className="w-12 h-12 text-blue-200 mb-3" />
-            <div className="text-2xl font-bold">{users.length}</div>
-            <div className="text-xs text-blue-200 font-medium uppercase tracking-wider">Active Community Members</div>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-[#f3f4f6] via-[#e0f2fe] to-[#fdf2f8] py-12 px-4 flex flex-col items-center">
+        <h2 className="text-4xl font-bold text-gray-800 mb-4 animate-fadeIn">People You May Know</h2>
+        <p className="text-sm text-gray-600 mb-10 text-center max-w-2xl animate-fadeIn delay-150">
+          Connect with new people and expand your network by sending them a friend request.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 max-w-6xl w-full">
+          {users.map((user, index) => (
+            <UserCard
+              key={user.id}
+              user={user}
+              isOnline={!!onlineUsers[user.id]}
+              sentRequest={!!sentRequests[user.id]}
+              onSendRequest={sendFriendRequest}
+              delay={index * 50}
+            />
+          ))}
         </div>
       </div>
 
-      {/* Main Community Grid */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800">People You May Know</h2>
-            <p className="text-sm text-slate-500">Send a connection request to start chatting</p>
-          </div>
-          <div className="text-sm font-semibold text-slate-500 bg-white px-4 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-            Showing <span className="text-blue-600 font-bold">{filteredUsers.length}</span> people
-          </div>
-        </div>
-
-        {filteredUsers.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto my-8 shadow-sm">
-            <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-700 mb-1">No community members found</h3>
-            <p className="text-sm text-slate-500">We couldn't find anyone matching "{searchFilter}". Try a different search term!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {filteredUsers.map((user, index) => (
-              <UserCard
-                key={user.id}
-                user={user}
-                isOnline={!!onlineUsers[user.id]}
-                sentRequest={!!sentRequests[user.id]}
-                onSendRequest={sendFriendRequest}
-                delay={index * 40}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+      <style>
+        {`
+          @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+          }
+          .animate-fadeInUp {
+            animation: fadeIn 0.6s ease-out forwards;
+          }
+          .delay-150 {
+            animation-delay: 0.15s;
+          }
+        `}
+      </style>
+    </>
   );
 };
 
